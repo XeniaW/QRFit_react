@@ -1,4 +1,4 @@
-import { IonApp, IonLoading, IonRouterOutlet, IonSplitPane, IonTab, setupIonicReact, } from '@ionic/react';
+import { IonApp, IonLabel, IonLoading, IonRouterOutlet, IonSplitPane, IonTabBar, IonTabButton, setupIonicReact, } from '@ionic/react';
 import { IonReactRouter  } from '@ionic/react-router';
 import { Redirect, Route } from 'react-router-dom';
 import { AuthContext } from "./auth";
@@ -63,6 +63,20 @@ const App: React.FC = () => {
             <Route exact path="/pw-recovery" component={PWRecovery}  />
           </IonRouterOutlet>
         </IonSplitPane>
+        { authState.loggedIn  == true && 
+             <IonTabBar>
+                <IonTabButton tab="training" href="/my/training" >
+               <IonLabel>Training</IonLabel>
+               </IonTabButton>
+               <IonTabButton tab="statistics" href="/my/statistic" >
+               <IonLabel>Overview</IonLabel>
+               </IonTabButton>
+               <IonTabButton tab="advisor" href="/my/advisor" >
+               <IonLabel>Advisor</IonLabel>
+               </IonTabButton>
+             </IonTabBar>
+            }
+      
       </IonReactRouter>
       </AuthContext.Provider>
     </IonApp>
