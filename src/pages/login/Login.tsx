@@ -42,7 +42,7 @@ const Login: React.FC = () => {
 
 if (loggedIn) {
   console.log(loggedIn);
-  return <Redirect to="/my/entries" />
+  return <Redirect to="/my/training" />
 }
 
   return (
