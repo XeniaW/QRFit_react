@@ -1,4 +1,4 @@
-import { IonRow,IonCol, IonContent,IonButton, IonHeader, IonPage, IonTitle, IonToolbar, IonList, IonItem } from '@ionic/react';
+import { IonRow,IonCol, IonContent,IonButton, IonHeader,IonButtons,IonBackButton, IonPage, IonTitle, IonToolbar, IonList, IonItem } from '@ionic/react';
 
 import './Machines.css';
 import {firestore} from '../../firebase';
@@ -6,11 +6,10 @@ import { useEffect, useState } from 'react';
 import { collection, getDocs} from 'firebase/firestore';
 
 
-const Machines: React.FC = () => {
+const MachineList: React.FC = () => {
   const [machines, setMachines] = useState<any[]>([]);
   const machineRef = collection(firestore, "machines");
 
-  // const actionPromises = [];
   useEffect(() => {
       const getMachines = async () => {
         const data = await getDocs(machineRef);
@@ -23,11 +22,13 @@ const Machines: React.FC = () => {
     <IonPage>     
         <IonHeader>
           <IonToolbar>
+          <IonButtons slot="start">
+          <IonBackButton defaultHref='/' />
+          </IonButtons>
             <IonTitle size="large">Machines</IonTitle>
           </IonToolbar>
         </IonHeader>
-        <IonContent fullscreen>  
-          
+        <IonContent fullscreen>    
             <IonList>
               {machines.map((machine) =>
               <IonItem button key={machine.id}
@@ -42,4 +43,4 @@ const Machines: React.FC = () => {
   );
 };
 
-export default Machines;
+export default MachineList;

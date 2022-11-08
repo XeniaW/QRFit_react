@@ -14,7 +14,8 @@ import Training from './pages/UserView/training/Training';
 import Statistics from './pages/UserView/statistics/Statistics';
 import Settings from './pages/UserView/settings/Settings';
 import Advisor from './pages/UserView/advisor/Advisor';
-import Machines from './pages/machines/Machines';
+import MachineList from './pages/machines/Machines';
+import MachineItem from './pages/machines/machine_item/MachineItem';
 
 const AppTabs: React.FC = () => {
   const { loggedIn } = useAuth();
@@ -31,10 +32,10 @@ const AppTabs: React.FC = () => {
           <Statistics />
         </Route>
         <Route exact path="/my/machines/">
-          <Machines />
+          <MachineList />
         </Route>
         <Route exact path="/my/machines/:id">
-          {/* <EntryPage /> */}
+          <MachineItem />
         </Route>
         <Route exact path="/my/settings">
           <Settings />
