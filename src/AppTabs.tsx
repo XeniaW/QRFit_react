@@ -16,6 +16,7 @@ import Settings from './pages/UserView/settings/Settings';
 import Advisor from './pages/UserView/advisor/Advisor';
 import MachineList from './pages/machines/Machines';
 import MachineItem from './pages/machines/machine_item/MachineItem';
+import StartTrainingSession from './pages/trainings/training_start/TrainingStart';
 
 const AppTabs: React.FC = () => {
   const { loggedIn } = useAuth();
@@ -27,6 +28,9 @@ const AppTabs: React.FC = () => {
       <IonRouterOutlet>
         <Route exact path="/my/training">
           <Training />
+        </Route>
+        <Route exact path="/my/trainingstart">
+          <StartTrainingSession />
         </Route>
         <Route exact path="/my/statistics">
           <Statistics />
