@@ -1,19 +1,27 @@
 {
-  "name": "FitAssist",
+  "name": "QRFit",
   "version": "0.0.1",
   "private": true,
   "dependencies": {
+    "@capacitor-mlkit/barcode-scanning": "^6.1.0",
+    "@capacitor/android": "6.0.0",
+    "@capacitor/app": "6.0.0",
+    "@capacitor/core": "6.0.0",
+    "@capacitor/haptics": "6.0.0",
+    "@capacitor/keyboard": "6.0.0",
+    "@capacitor/status-bar": "6.0.0",
     "@ionic/react": "^6.0.13",
     "@ionic/react-router": "^6.0.13",
     "@testing-library/jest-dom": "^5.11.9",
     "@testing-library/react": "^11.2.5",
     "@testing-library/user-event": "^12.6.3",
     "@types/jest": "^26.0.20",
-    "@types/node": "^12.19.15",
+    "@types/node": "^20.12.12",
     "@types/react": "^16.14.3",
     "@types/react-dom": "^16.9.10",
     "@types/react-router": "^5.1.11",
     "@types/react-router-dom": "^5.1.7",
+    "@vitejs/plugin-react": "^4.2.1",
     "firebase": "^9.8.3",
     "ionicons": "^5.4.0",
     "react": "^17.0.2",
@@ -60,5 +68,9 @@
       "last 1 safari version"
     ]
   },
-  "description": "An Ionic project"
+  "description": "An Ionic project",
+  "devDependencies": {
+    "@capacitor/cli": "6.0.0",
+    "vite-plugin-pwa": "^0.20.0"
+  }
 }

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { IonButton, IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonList, IonItem, IonIcon } from '@ionic/react';
+import { IonButton, IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonList, IonItem, IonIcon, IonModal } from '@ionic/react';
 import { firestore } from '../../../firebase'; // Ensure correct import path
-import { collection, addDoc, doc, updateDoc, Timestamp } from 'firebase/firestore';
-import AddMachinesFromTheList from '../add_machines/AddMachinesFromTheList'; // Ensure correct import path
+import { collection, addDoc, doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
+import AddMachinesFromTheList from '../add_machines/from_list/AddMachinesFromTheList'; // Ensure correct import path
 import { v4 as uuidv4 } from 'uuid';
 import { trash } from 'ionicons/icons';
+
 
 const StartTrainingSession: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -12,6 +13,7 @@ const StartTrainingSession: React.FC = () => {
   const [timer, setTimer] = useState(0);
   const [machines, setMachines] = useState<any[]>([]);
   const [showMachinesList, setShowMachinesList] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -87,6 +89,23 @@ const StartTrainingSession: React.FC = () => {
     }
   };
 
+  const handleAddMachineById = async (machineId: string) => {
+    if (sessionId) {
+      try {
+        const machineRef = doc(firestore, 'machines', machineId);
+        const machineSnap = await getDoc(machineRef);
+        if (machineSnap.exists()) {
+          const machine = { id: machineId, ...machineSnap.data() };
+          handleSelectMachine(machine);
+        } else {
+          console.error("No such machine!");
+        }
+      } catch (e) {
+        console.error("Error fetching machine:", e);
+      }
+    }
+  };
+
   const handleDeleteMachine = async (uniqueId: string, machineId: string) => {
     setMachines(prevMachines => prevMachines.filter(machine => machine.uniqueId !== uniqueId));
     
@@ -118,6 +137,7 @@ const StartTrainingSession: React.FC = () => {
           <>
             <IonButton color="danger" onClick={endTrainingSession}>End Session</IonButton>
             <IonButton onClick={() => setShowMachinesList(!showMachinesList)}>Add Machines from the List</IonButton>
+           
           </>
         )}
         {showMachinesList && <AddMachinesFromTheList onSelectMachine={handleSelectMachine} />}
@@ -129,6 +149,16 @@ const StartTrainingSession: React.FC = () => {
             </IonItem>
           ))}
         </IonList>
+        <IonModal isOpen={showQRScanner}>
+          <IonHeader>
+            <IonToolbar>
+              <IonTitle>Scan QR Code</IonTitle>
+            </IonToolbar>
+          </IonHeader>
+          <IonContent fullscreen>
+            <div style={{ height: '100%', width: '100%' }}></div>
+          </IonContent>
+        </IonModal>
       </IonContent>
     </IonPage>
   );

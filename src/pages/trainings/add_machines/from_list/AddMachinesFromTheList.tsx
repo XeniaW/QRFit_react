@@ -1,5 +1,5 @@
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonList, IonItem } from '@ionic/react';
-import { firestore } from '../../../firebase';
+import { firestore } from '../../../../firebase';
 import { useEffect, useState } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import './AddMachinesFromTheList.css';

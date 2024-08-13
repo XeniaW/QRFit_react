@@ -12,7 +12,7 @@ const Home: React.FC = () => {
       <IonContent fullscreen>       
         <IonHeader>
           <IonToolbar>
-            <IonTitle size="large">Welcome to FitAssist!</IonTitle>
+            <IonTitle size="large">Welcome to QRFit!</IonTitle>
           </IonToolbar>
         </IonHeader>
  

@@ -1,5 +1,7 @@
 {
-  "name": "FitAssist",
-  "integrations": {},
+  "name": "QRFit",
+  "integrations": {
+    "capacitor": {}
+  },
   "type": "react"
 }

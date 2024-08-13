@@ -39,6 +39,7 @@ import { auth } from './firebase';
 
 
 
+
 setupIonicReact();
 
 
@@ -78,6 +79,7 @@ const App: React.FC = () => {
               <AppTabs />
         </Route>
         <Redirect exact path="/" to="/my/training" />
+      
         </Switch>     
       </IonReactRouter>
       </AuthContext.Provider>
