@@ -39,7 +39,7 @@ const Training: React.FC = () => {
             </IonCol>
           </IonRow>
           <IonRow>
-            <IonCol><IonButton expand="full" color="light" routerLink="/registration">View All Trainings</IonButton></IonCol>
+            <IonCol><IonButton expand="full" color="light" routerLink="/my/sessions">View All Trainings</IonButton></IonCol>
           </IonRow>
           <IonRow>
             <IonCol><IonButton expand="full" color="light" routerLink="/my/machines">Browse Machines</IonButton></IonCol>
