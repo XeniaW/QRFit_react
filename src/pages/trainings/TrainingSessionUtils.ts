@@ -22,9 +22,17 @@ export const convertFirestoreTimestampToDate = (timestamp: { seconds: number, na
  */
 export const calculateDuration = (startDate: Date, endDate: Date) => {
   const durationMs = endDate.getTime() - startDate.getTime();
+
   const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
   const durationMinutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-  return `${durationHours} hours ${durationMinutes} minutes`;
+  const durationSeconds = Math.floor((durationMs % (1000 * 60)) / 1000);
+
+  // Pad hours, minutes, and seconds with leading zeros if they are less than 10
+  const hours = String(durationHours).padStart(2, '0');
+  const minutes = String(durationMinutes).padStart(2, '0');
+  const seconds = String(durationSeconds).padStart(2, '0');
+
+  return `${hours}:${minutes}:${seconds}`;
 };
 
 /**

@@ -48,7 +48,7 @@ const TrainingSessionDetails: React.FC = () => {
       </IonHeader>
       <IonContent fullscreen>
         <h2>Session ID: {id}</h2>
-        <p><strong>Start Date:</strong> {formattedStartDate}</p>
+        <p><strong>Date:</strong> {formattedStartDate}</p>
         <p><strong>Duration:</strong> {duration}</p>
         <IonButton color="danger" onClick={() => setShowDeleteAlert(true)}>Delete Session</IonButton>
         
