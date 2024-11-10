@@ -1,13 +1,15 @@
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonAlert, IonButtons, IonBackButton } from '@ionic/react';
 import { useEffect, useState } from 'react';
 import { firestore } from '../../../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, DocumentReference } from 'firebase/firestore';
 import { convertFirestoreTimestampToDate, calculateDuration, deleteTrainingSession } from '../TrainingSessionUtils';
 import { useParams, useHistory } from 'react-router-dom';
+import { Machines, TrainingSessions } from '../../../datamodels';
 
 const TrainingSessionDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [trainingSession, setTrainingSession] = useState<any>(null);
+  const [trainingSession, setTrainingSession] = useState<TrainingSessions | null>(null);
+  const [machines, setMachines] = useState<Machines[]>([]); // Store machine details here
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const history = useHistory();
 
@@ -16,7 +18,20 @@ const TrainingSessionDetails: React.FC = () => {
       const sessionRef = doc(firestore, "training_sessions", id);
       const sessionDoc = await getDoc(sessionRef);
       if (sessionDoc.exists()) {
-        setTrainingSession({ id: sessionDoc.id, ...sessionDoc.data() });
+        const sessionData = sessionDoc.data() as TrainingSessions;
+        setTrainingSession({ ...sessionData });
+
+        // If machines field is present and is an array of references
+        if (sessionData.machines && Array.isArray(sessionData.machines)) {
+          const machinePromises = sessionData.machines.map((machineRef: DocumentReference) =>
+            getDoc(machineRef).then((machineDoc) => ({
+              id: machineDoc.id,
+              ...machineDoc.data(),
+            }) as Machines)
+          );
+          const machineData = await Promise.all(machinePromises);
+          setMachines(machineData);
+        }
       }
     };
     fetchSession();
@@ -50,6 +65,19 @@ const TrainingSessionDetails: React.FC = () => {
         <h2>Session ID: {id}</h2>
         <p><strong>Date:</strong> {formattedStartDate}</p>
         <p><strong>Duration:</strong> {duration}</p>
+        
+        {/* Machines List */}
+        <p><strong>Machines:</strong></p>
+       {machines.length > 0 ? (
+  <ul>
+    {machines.map((machine, index) => (
+      <li key={`${machine.id}-${index}`}>{machine.title || "Unnamed Machine"}</li>
+    ))}
+  </ul>
+) : (
+  <p>No machines added for this session.</p>
+)}
+
         <IonButton color="danger" onClick={() => setShowDeleteAlert(true)}>Delete Session</IonButton>
         
         {/* Confirmation Alert for Deletion */}
