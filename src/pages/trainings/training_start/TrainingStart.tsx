@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { IonButton, IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonList, IonItem, IonIcon, IonModal } from '@ionic/react';
+import { IonButton, IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonList, IonItem, IonIcon, IonModal, IonAlert } from '@ionic/react';
 import { firestore } from '../../../firebase'; // Ensure correct import path
 import { collection, addDoc, doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import AddMachinesFromTheList from '../add_machines/from_list/AddMachinesFromTheList'; // Ensure correct import path
 import { v4 as uuidv4 } from 'uuid';
 import { trash } from 'ionicons/icons';
-
 
 const StartTrainingSession: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -14,6 +13,7 @@ const StartTrainingSession: React.FC = () => {
   const [machines, setMachines] = useState<any[]>([]);
   const [showMachinesList, setShowMachinesList] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [showStartAlert, setShowStartAlert] = useState(false);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -132,15 +132,33 @@ const StartTrainingSession: React.FC = () => {
       </IonHeader>
       <IonContent className="ion-padding">
         {!sessionActive ? (
-          <IonButton onClick={startTrainingSession}>Start Training</IonButton>
+          <>
+            <IonButton onClick={() => setShowStartAlert(true)}>Start Training</IonButton>
+            <IonAlert
+              isOpen={showStartAlert}
+              onDidDismiss={() => setShowStartAlert(false)}
+              header={'Are you ready to pump?'}
+              buttons={[
+                {
+                  text: 'No',
+                  role: 'cancel',
+                  handler: () => setShowStartAlert(false)
+                },
+                {
+                  text: 'Yes',
+                  handler: () => startTrainingSession()
+                }
+              ]}
+            />
+          </>
         ) : (
           <>
             <IonButton color="danger" onClick={endTrainingSession}>End Session</IonButton>
             <IonButton onClick={() => setShowMachinesList(!showMachinesList)}>Add Machines from the List</IonButton>
-           
           </>
         )}
         {showMachinesList && <AddMachinesFromTheList onSelectMachine={handleSelectMachine} />}
+
         <IonList>
           {machines.map(machine => (
             <IonItem key={machine.uniqueId}>
