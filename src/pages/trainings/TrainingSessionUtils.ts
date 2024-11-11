@@ -2,6 +2,7 @@
 
 import { firestore } from '../../firebase';
 import { deleteDoc, doc } from 'firebase/firestore';
+import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
 
 /**
  * Convert Firestore Timestamp to JavaScript Date
@@ -60,4 +61,30 @@ export const formatTime = (seconds: number): string => {
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+
+/**
+ * Initiates QR scanning and returns the content if successful.
+ * @param onResult A callback function to process the scanned QR content.
+ * @returns A promise that resolves with the scanned QR code content or null if scanning is canceled.
+ */
+export const startQRScan = async (): Promise<string | null> => {
+  try {
+    await BarcodeScanner.checkPermission({ force: true });
+    BarcodeScanner.hideBackground();
+
+    const result = await BarcodeScanner.startScan(); // Start the QR code scan
+
+    if (result.hasContent) {
+      return result.content; // Return scanned content (e.g., machine ID)
+    } else {
+      return null;
+    }
+  } catch (error) {
+    console.error("QR Scan failed:", error);
+    return null;
+  } finally {
+    BarcodeScanner.showBackground(); // Ensure background is shown after scan
+    BarcodeScanner.stopScan(); // Stop scanning in case it's still active
+  }
 };

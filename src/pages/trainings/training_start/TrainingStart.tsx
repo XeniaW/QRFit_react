@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { IonButton, IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonList, IonItem, IonIcon, IonModal, IonAlert } from '@ionic/react';
+import { IonButton, IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonList, IonItem, IonIcon, IonAlert } from '@ionic/react';
 import { firestore } from '../../../firebase';
 import { collection, addDoc, doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import AddMachinesFromTheList from '../add_machines/from_list/AddMachinesFromTheList';
 import { v4 as uuidv4 } from 'uuid';
 import { trash } from 'ionicons/icons';
-import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
 import { formatTime } from '../TrainingSessionUtils';
+import { startQRScan } from '../TrainingSessionUtils'; // Import the new QR scanner service
 
 const StartTrainingSession: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -14,7 +14,6 @@ const StartTrainingSession: React.FC = () => {
   const [timer, setTimer] = useState(0);
   const [machines, setMachines] = useState<any[]>([]);
   const [showMachinesList, setShowMachinesList] = useState(false);
-  const [showQRScanner, setShowQRScanner] = useState(false);
   const [showStartAlert, setShowStartAlert] = useState(false);
 
   useEffect(() => {
@@ -82,24 +81,6 @@ const StartTrainingSession: React.FC = () => {
     }
   };
 
-  const handleQRScan = async () => {
-    try {
-      setShowQRScanner(true);
-      await BarcodeScanner.checkPermission({ force: true });
-      BarcodeScanner.hideBackground();
-
-      const result = await BarcodeScanner.startScan(); // Scan QR code
-      if (result.hasContent) {
-        const machineId = result.content;
-        handleAddMachineById(machineId); // Fetch and add machine
-      }
-      setShowQRScanner(false);
-    } catch (e) {
-      console.error("QR Scan failed: ", e);
-      setShowQRScanner(false);
-    }
-  };
-
   const handleAddMachineById = async (machineId: string) => {
     if (sessionId) {
       try {
@@ -114,6 +95,14 @@ const StartTrainingSession: React.FC = () => {
       } catch (e) {
         console.error("Error fetching machine:", e);
       }
+    }
+  };
+
+  const handleQRScan = async () => {
+    const machineId = await startQRScan(); // Use the QR scanner service
+
+    if (machineId) {
+      handleAddMachineById(machineId); // Fetch and add machine if QR scan was successful
     }
   };
 
