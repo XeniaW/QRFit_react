@@ -6,7 +6,8 @@ import AddMachinesFromTheList from '../add_machines/from_list/AddMachinesFromThe
 import { v4 as uuidv4 } from 'uuid';
 import { trash } from 'ionicons/icons';
 import { formatTime } from '../TrainingSessionUtils';
-import { startQRScan } from '../TrainingSessionUtils'; // Import the new QR scanner service
+import { startQRScan } from '../QRScannerService';
+import './TrainingStart.css'; 
 
 const StartTrainingSession: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -15,6 +16,7 @@ const StartTrainingSession: React.FC = () => {
   const [machines, setMachines] = useState<any[]>([]);
   const [showMachinesList, setShowMachinesList] = useState(false);
   const [showStartAlert, setShowStartAlert] = useState(false);
+  const [isScanning, setIsScanning] = useState(false); // State to control overlay
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -63,6 +65,23 @@ const StartTrainingSession: React.FC = () => {
     }
   };
 
+  const handleAddMachineById = async (machineId: string) => {
+    if (sessionId) {
+      try {
+        const machineRef = doc(firestore, 'machines', machineId);
+        const machineSnap = await getDoc(machineRef);
+        if (machineSnap.exists()) {
+          const machine = { id: machineId, ...machineSnap.data() };
+          handleSelectMachine(machine);
+        } else {
+          console.error("No such machine!");
+        }
+      } catch (e) {
+        console.error("Error fetching machine:", e);
+      }
+    }
+  };
+
   const handleSelectMachine = async (machine: any) => {
     if (sessionId) {
       const uniqueMachine = { ...machine, uniqueId: uuidv4() };
@@ -81,29 +100,15 @@ const StartTrainingSession: React.FC = () => {
     }
   };
 
-  const handleAddMachineById = async (machineId: string) => {
-    if (sessionId) {
-      try {
-        const machineRef = doc(firestore, 'machines', machineId);
-        const machineSnap = await getDoc(machineRef);
-        if (machineSnap.exists()) {
-          const machine = { id: machineId, ...machineSnap.data() };
-          handleSelectMachine(machine);
-        } else {
-          console.error("No such machine!");
-        }
-      } catch (e) {
-        console.error("Error fetching machine:", e);
-      }
-    }
-  };
-
   const handleQRScan = async () => {
-    const machineId = await startQRScan(); // Use the QR scanner service
+    setIsScanning(true); // Show overlay when scanning starts
+    const machineId = await startQRScan(); // Initiate the scan
 
     if (machineId) {
       handleAddMachineById(machineId); // Fetch and add machine if QR scan was successful
     }
+    
+    setIsScanning(false); // Hide overlay when scanning ends
   };
 
   const handleDeleteMachine = async (uniqueId: string, machineId: string) => {
@@ -150,7 +155,16 @@ const StartTrainingSession: React.FC = () => {
             <IonButton onClick={handleQRScan}>Scan QR Code</IonButton>
           </>
         )}
+        
         {showMachinesList && <AddMachinesFromTheList onSelectMachine={handleSelectMachine} />}
+
+        {/* Overlay shown only during scanning */}
+        {isScanning && (
+          <div className="camera-overlay">
+            Scanning...
+          </div>
+        )}
+
         <IonList>
           {machines.map(machine => (
             <IonItem key={machine.uniqueId}>
