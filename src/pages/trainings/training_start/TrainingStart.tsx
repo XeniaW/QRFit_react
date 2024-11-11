@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { IonButton, IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonList, IonItem, IonIcon, IonModal, IonAlert } from '@ionic/react';
-import { firestore } from '../../../firebase'; // Ensure correct import path
+import { firestore } from '../../../firebase';
 import { collection, addDoc, doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
-import AddMachinesFromTheList from '../add_machines/from_list/AddMachinesFromTheList'; // Ensure correct import path
+import AddMachinesFromTheList from '../add_machines/from_list/AddMachinesFromTheList';
 import { v4 as uuidv4 } from 'uuid';
 import { trash } from 'ionicons/icons';
+import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
+import { formatTime } from '../TrainingSessionUtils';
 
 const StartTrainingSession: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -40,7 +42,6 @@ const StartTrainingSession: React.FC = () => {
         machines: [],
       };
       const docRef = await addDoc(collection(firestore, 'training_sessions'), trainingSession);
-      console.log("Training session started with ID: ", docRef.id);
       setSessionId(docRef.id);
       setSessionActive(true);
       setTimer(0);
@@ -55,27 +56,19 @@ const StartTrainingSession: React.FC = () => {
         const end_date = Timestamp.now();
         const sessionRef = doc(firestore, 'training_sessions', sessionId);
         await updateDoc(sessionRef, { end_date });
-        console.log("Training session ended with ID: ", sessionId);
         setSessionActive(false);
-        setMachines([]); // Clear machines when session ends
+        setMachines([]);
       } catch (e) {
         console.error("Error ending training session: ", e);
       }
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
   const handleSelectMachine = async (machine: any) => {
     if (sessionId) {
       const uniqueMachine = { ...machine, uniqueId: uuidv4() };
       setMachines(prevMachines => [...prevMachines, uniqueMachine]);
-      
+
       try {
         const sessionRef = doc(firestore, 'training_sessions', sessionId);
         await updateDoc(sessionRef, {
@@ -86,6 +79,24 @@ const StartTrainingSession: React.FC = () => {
       }
 
       setShowMachinesList(false);
+    }
+  };
+
+  const handleQRScan = async () => {
+    try {
+      setShowQRScanner(true);
+      await BarcodeScanner.checkPermission({ force: true });
+      BarcodeScanner.hideBackground();
+
+      const result = await BarcodeScanner.startScan(); // Scan QR code
+      if (result.hasContent) {
+        const machineId = result.content;
+        handleAddMachineById(machineId); // Fetch and add machine
+      }
+      setShowQRScanner(false);
+    } catch (e) {
+      console.error("QR Scan failed: ", e);
+      setShowQRScanner(false);
     }
   };
 
@@ -108,7 +119,6 @@ const StartTrainingSession: React.FC = () => {
 
   const handleDeleteMachine = async (uniqueId: string, machineId: string) => {
     setMachines(prevMachines => prevMachines.filter(machine => machine.uniqueId !== uniqueId));
-    
     if (sessionId) {
       try {
         const sessionRef = doc(firestore, 'training_sessions', sessionId);
@@ -139,15 +149,8 @@ const StartTrainingSession: React.FC = () => {
               onDidDismiss={() => setShowStartAlert(false)}
               header={'Are you ready to pump?'}
               buttons={[
-                {
-                  text: 'No',
-                  role: 'cancel',
-                  handler: () => setShowStartAlert(false)
-                },
-                {
-                  text: 'Yes',
-                  handler: () => startTrainingSession()
-                }
+                { text: 'No', role: 'cancel' },
+                { text: 'Yes', handler: () => startTrainingSession() }
               ]}
             />
           </>
@@ -155,10 +158,10 @@ const StartTrainingSession: React.FC = () => {
           <>
             <IonButton color="danger" onClick={endTrainingSession}>End Session</IonButton>
             <IonButton onClick={() => setShowMachinesList(!showMachinesList)}>Add Machines from the List</IonButton>
+            <IonButton onClick={handleQRScan}>Scan QR Code</IonButton>
           </>
         )}
         {showMachinesList && <AddMachinesFromTheList onSelectMachine={handleSelectMachine} />}
-
         <IonList>
           {machines.map(machine => (
             <IonItem key={machine.uniqueId}>
@@ -167,16 +170,6 @@ const StartTrainingSession: React.FC = () => {
             </IonItem>
           ))}
         </IonList>
-        <IonModal isOpen={showQRScanner}>
-          <IonHeader>
-            <IonToolbar>
-              <IonTitle>Scan QR Code</IonTitle>
-            </IonToolbar>
-          </IonHeader>
-          <IonContent fullscreen>
-            <div style={{ height: '100%', width: '100%' }}></div>
-          </IonContent>
-        </IonModal>
       </IonContent>
     </IonPage>
   );

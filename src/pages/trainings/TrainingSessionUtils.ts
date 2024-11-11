@@ -8,9 +8,9 @@ import { deleteDoc, doc } from 'firebase/firestore';
  * @param timestamp Firestore Timestamp with seconds and nanoseconds
  * @returns JavaScript Date or null if the timestamp is invalid
  */
-export const convertFirestoreTimestampToDate = (timestamp: { seconds: number, nanoseconds: number }) => {
+export const convertFirestoreTimestampToDate = (timestamp: { seconds: number }) => {
   return timestamp && timestamp.seconds
-    ? new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000)
+    ? new Date(timestamp.seconds * 1000)
     : null;
 };
 
@@ -48,4 +48,16 @@ export const deleteTrainingSession = async (id: string) => {
     console.error("Error deleting document:", error);
     throw error; // Rethrow error to handle in the component
   }
+};
+
+/**
+ * Utility function to format time in HH:MM:SS format.
+ * @param seconds - Total seconds to format.
+ * @returns Formatted time string.
+ */
+export const formatTime = (seconds: number): string => {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 };
