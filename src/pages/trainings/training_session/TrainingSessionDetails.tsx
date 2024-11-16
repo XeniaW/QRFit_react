@@ -1,39 +1,75 @@
-import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonButton, IonAlert, IonButtons, IonBackButton } from '@ionic/react';
+import {
+  IonContent,
+  IonHeader,
+  IonPage,
+  IonTitle,
+  IonToolbar,
+  IonButton,
+  IonAlert,
+  IonButtons,
+  IonBackButton,
+} from '@ionic/react';
 import { useEffect, useState } from 'react';
 import { firestore } from '../../../firebase';
-import { doc, getDoc, DocumentReference } from 'firebase/firestore';
-import { convertFirestoreTimestampToDate, calculateDuration, deleteTrainingSession } from '../TrainingSessionUtils';
+import { doc, getDoc } from 'firebase/firestore';
+import {
+  convertFirestoreTimestampToDate,
+  calculateDuration,
+  deleteTrainingSession,
+} from '../utils/TrainingSessionUtils';
 import { useParams, useHistory } from 'react-router-dom';
-import { Machines, TrainingSessions } from '../../../datamodels';
+import { Machines, TrainingSessions, MachineSession } from '../../../datamodels';
+
+interface MachineDetails {
+  machine: Machines;
+  sets: MachineSession['sets'];
+}
 
 const TrainingSessionDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [trainingSession, setTrainingSession] = useState<TrainingSessions | null>(null);
-  const [machines, setMachines] = useState<Machines[]>([]); // Store machine details here
+  const [machineDetails, setMachineDetails] = useState<MachineDetails[]>([]); // Store machine and set details
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const history = useHistory();
 
   useEffect(() => {
     const fetchSession = async () => {
-      const sessionRef = doc(firestore, "training_sessions", id);
+      const sessionRef = doc(firestore, 'training_sessions', id);
       const sessionDoc = await getDoc(sessionRef);
+
       if (sessionDoc.exists()) {
         const sessionData = sessionDoc.data() as TrainingSessions;
-        setTrainingSession({ ...sessionData });
+        setTrainingSession(sessionData);
 
-        // If machines field is present and is an array of references
-        if (sessionData.machines && Array.isArray(sessionData.machines)) {
-          const machinePromises = sessionData.machines.map((machineRef: DocumentReference) =>
-            getDoc(machineRef).then((machineDoc) => ({
-              id: machineDoc.id,
-              ...machineDoc.data(),
-            }) as Machines)
-          );
-          const machineData = await Promise.all(machinePromises);
-          setMachines(machineData);
-        }
+        // Fetch machine_sessions and their corresponding machines and sets
+        const machineSessionPromises = sessionData.machine_sessions.map(async (machineSessionId) => {
+          const machineSessionRef = doc(firestore, 'machine_sessions', machineSessionId);
+          const machineSessionDoc = await getDoc(machineSessionRef);
+
+          if (machineSessionDoc.exists()) {
+            const machineSessionData = machineSessionDoc.data() as MachineSession;
+
+            // Fetch machine details using machine_ref
+            const machineRef = machineSessionData.machine_ref;
+            const machineDoc = await getDoc(machineRef);
+            if (machineDoc.exists()) {
+              return {
+                machine: { id: machineDoc.id, ...machineDoc.data() } as Machines,
+                sets: machineSessionData.sets,
+              };
+            }
+          }
+          return null;
+        });
+
+        // Resolve all promises and filter out any null values
+        const detailedData = (await Promise.all(machineSessionPromises)).filter(
+          (data) => data !== null
+        ) as MachineDetails[];
+        setMachineDetails(detailedData);
       }
     };
+
     fetchSession();
   }, [id]);
 
@@ -42,44 +78,67 @@ const TrainingSessionDetails: React.FC = () => {
       await deleteTrainingSession(id);
       history.push('/my/sessions'); // Redirect back to sessions list after deletion
     } catch (error) {
-      console.error("Error deleting document:", error);
+      console.error('Error deleting document:', error);
     }
   };
 
   const startDate = trainingSession ? convertFirestoreTimestampToDate(trainingSession.start_date) : null;
   const endDate = trainingSession ? convertFirestoreTimestampToDate(trainingSession.end_date) : null;
-  const formattedStartDate = startDate ? startDate.toLocaleString() : "No Start Date";
-  const duration = startDate && endDate ? calculateDuration(startDate, endDate) : "Duration not available";
+  const formattedStartDate = startDate ? startDate.toLocaleString() : 'No Start Date';
+  const duration = startDate && endDate ? calculateDuration(startDate, endDate) : 'Duration not available';
 
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref='/' />
+            <IonBackButton defaultHref="/" />
           </IonButtons>
           <IonTitle>Training Session Details</IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen>
         <h2>Session ID: {id}</h2>
-        <p><strong>Date:</strong> {formattedStartDate}</p>
-        <p><strong>Duration:</strong> {duration}</p>
-        
-        {/* Machines List */}
-        <p><strong>Machines:</strong></p>
-       {machines.length > 0 ? (
-  <ul>
-    {machines.map((machine, index) => (
-      <li key={`${machine.id}-${index}`}>{machine.title || "Unnamed Machine"}</li>
-    ))}
-  </ul>
-) : (
-  <p>No machines added for this session.</p>
-)}
+        <p>
+          <strong>Date:</strong> {formattedStartDate}
+        </p>
+        <p>
+          <strong>Duration:</strong> {duration}
+        </p>
 
-        <IonButton color="danger" onClick={() => setShowDeleteAlert(true)}>Delete Session</IonButton>
-        
+        {/* Machines List */}
+        <p>
+          <strong>Machines:</strong>
+        </p>
+        {machineDetails.length > 0 ? (
+          <ul>
+            {machineDetails.map(({ machine, sets }) => (
+              <li key={machine.id}>
+                <p>
+                  <strong>{machine.title || 'Unnamed Machine'}</strong>
+                </p>
+                {sets.length > 0 ? (
+                  <ul>
+                    {sets.map((set) => (
+                      <li key={set.set_number}>
+                        Set {set.set_number}: {set.reps} reps, {set.weight} kg
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No sets recorded.</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No machines added for this session.</p>
+        )}
+
+        <IonButton color="danger" onClick={() => setShowDeleteAlert(true)}>
+          Delete Session
+        </IonButton>
+
         {/* Confirmation Alert for Deletion */}
         <IonAlert
           isOpen={showDeleteAlert}
@@ -90,12 +149,12 @@ const TrainingSessionDetails: React.FC = () => {
             {
               text: 'No',
               role: 'cancel',
-              handler: () => setShowDeleteAlert(false)
+              handler: () => setShowDeleteAlert(false),
             },
             {
               text: 'Yes',
-              handler: handleDelete
-            }
+              handler: handleDelete,
+            },
           ]}
         />
       </IonContent>
