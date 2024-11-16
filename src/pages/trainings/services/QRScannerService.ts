@@ -1,36 +1,35 @@
+import { getDoc, doc } from 'firebase/firestore';
+import { firestore } from '../../../firebase';
+import { Machines } from '../../../datamodels';
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
 import { Capacitor } from '@capacitor/core';
 import jsQR from 'jsqr';
 
 export const startQRScan = async (): Promise<string | null> => {
   if (Capacitor.isNativePlatform()) {
-    // Native platform: Use Capacitor's BarcodeScanner
     try {
       await BarcodeScanner.checkPermission({ force: true });
       const result = await BarcodeScanner.startScan();
-
       if (result.hasContent) {
         return result.content;
       }
     } catch (error) {
-      console.error("Native QR Scan failed:", error);
+      console.error('Native QR Scan failed:', error);
     } finally {
       BarcodeScanner.stopScan();
     }
   } else {
-    // Web platform: Use HTML5 getUserMedia with jsQR
     return await scanWithWebCamera();
   }
-
   return null;
 };
 
-// Helper function to scan with web camera
+// Helper function to scan with a web camera
 const scanWithWebCamera = async (): Promise<string | null> => {
   return new Promise(async (resolve, reject) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } }
+        video: { facingMode: { ideal: 'environment' } },
       });
 
       const video = document.createElement('video');
@@ -60,20 +59,35 @@ const scanWithWebCamera = async (): Promise<string | null> => {
 
       requestAnimationFrame(scanFrame);
 
-      // Stop the video stream and resolve with null if scanning fails
       const stopStream = (stream: MediaStream) => {
         stream.getTracks().forEach((track) => track.stop());
         video.srcObject = null;
       };
 
-      // Timeout for the camera
       setTimeout(() => {
         stopStream(stream);
-        resolve(null); // Resolve with null if no QR code is detected
-      }, 15000); // 15 seconds timeout
+        resolve(null);
+      }, 15000);
     } catch (error) {
-      console.error("Web QR Scan failed:", error);
+      console.error('Web QR Scan failed:', error);
       reject(null);
     }
   });
+};
+
+// Fetch a machine by ID from Firestore
+export const handleAddMachineById = async (machineId: string): Promise<Machines | null> => {
+  try {
+    const machineRef = doc(firestore, 'machines', machineId);
+    const machineSnap = await getDoc(machineRef);
+    if (machineSnap.exists()) {
+      return { id: machineId, ...machineSnap.data() } as Machines;
+    } else {
+      console.error('No such machine!');
+      return null;
+    }
+  } catch (e) {
+    console.error('Error fetching machine:', e);
+    return null;
+  }
 };

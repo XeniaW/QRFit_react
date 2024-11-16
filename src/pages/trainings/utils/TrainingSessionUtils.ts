@@ -1,8 +1,5 @@
-
-
-import { firestore } from '../../firebase';
+import { firestore } from '../../../firebase';
 import { deleteDoc, doc } from 'firebase/firestore';
-import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
 
 /**
  * Convert Firestore Timestamp to JavaScript Date
