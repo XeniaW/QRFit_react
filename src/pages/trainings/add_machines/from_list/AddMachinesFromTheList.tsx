@@ -21,7 +21,7 @@ const AddMachinesFromTheList: React.FC<AddMachinesFromTheListProps> = ({ onSelec
   }, []);
 
   return (
-    <IonContent fullscreen>
+    <IonContent>
       <IonList>
         {machines.map((machine) =>
           <IonItem button key={machine.id} onClick={() => onSelectMachine(machine)}>

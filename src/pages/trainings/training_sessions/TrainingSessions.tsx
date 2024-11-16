@@ -4,7 +4,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { firestore } from '../../../firebase';
 import { useIonViewWillEnter } from '@ionic/react';
 
-import { convertFirestoreTimestampToDate, calculateDuration } from '../TrainingSessionUtils';
+import { convertFirestoreTimestampToDate, calculateDuration } from '../utils/TrainingSessionUtils';
 
 const TrainingSessions: React.FC = () => {
   const [trainingSessions, setTrainingSessions] = useState<any[]>([]);

@@ -1,178 +1,146 @@
 import React, { useState, useEffect } from 'react';
-import { IonButton, IonContent, IonHeader, IonPage, IonTitle, IonToolbar, IonList, IonItem, IonIcon, IonAlert } from '@ionic/react';
-import { firestore } from '../../../firebase';
-import { collection, addDoc, doc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
-import AddMachinesFromTheList from '../add_machines/from_list/AddMachinesFromTheList';
-import { v4 as uuidv4 } from 'uuid';
+import {
+  IonButton,
+  IonContent,
+  IonHeader,
+  IonPage,
+  IonTitle,
+  IonToolbar,
+  IonList,
+  IonItem,
+  IonIcon,
+  IonAlert,
+} from '@ionic/react';
 import { trash } from 'ionicons/icons';
-import { formatTime } from '../TrainingSessionUtils';
-import { startQRScan } from '../QRScannerService';
-import './TrainingStart.css'; 
+import { formatTime } from '../utils/TrainingSessionUtils';
+import { startQRScan, handleAddMachineById } from '../services/QRScannerService';
+import { startSession, endSession, addMachineSession, deleteMachineSession } from '../services/TrainingSessionService';
+import PickerModal from '../add_machines/picker/PickerModal';
+import AddMachinesFromTheList from '../add_machines/from_list/AddMachinesFromTheList';
+import { Machines, MachineSession } from '../../../datamodels';
+import './TrainingStart.css';
 
 const StartTrainingSession: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionActive, setSessionActive] = useState(false);
   const [timer, setTimer] = useState(0);
-  const [machines, setMachines] = useState<any[]>([]);
-  const [showMachinesList, setShowMachinesList] = useState(false);
+  const [machineSessions, setMachineSessions] = useState<MachineSession[]>([]);
+  const [showMachinesList, setShowMachinesList] = useState(false); // Controls visibility of the machine list
   const [showStartAlert, setShowStartAlert] = useState(false);
-  const [isScanning, setIsScanning] = useState(false); // State to control overlay
+  const [isScanning, setIsScanning] = useState(false);
+  const [pickerType, setPickerType] = useState<'reps' | 'weight' | null>(null);
+  const [selectedMachine, setSelectedMachine] = useState<Machines | null>(null);
+  const [pendingSession, setPendingSession] = useState<{ reps: number | null; weight: number | null }>({ reps: null, weight: null });
 
+  // Timer logic
   useEffect(() => {
     let interval: NodeJS.Timeout;
-
     if (sessionActive) {
-      interval = setInterval(() => {
-        setTimer(prevTimer => prevTimer + 1);
-      }, 1000);
+      interval = setInterval(() => setTimer((prevTimer) => prevTimer + 1), 1000);
     }
-
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
+    return () => interval && clearInterval(interval);
   }, [sessionActive]);
 
-  const startTrainingSession = async () => {
-    try {
-      const start_date = Timestamp.now();
-      const trainingSession = {
-        start_date,
-        end_date: null,
-        machines: [],
-      };
-      const docRef = await addDoc(collection(firestore, 'training_sessions'), trainingSession);
-      setSessionId(docRef.id);
-      setSessionActive(true);
-      setTimer(0);
-    } catch (e) {
-      console.error("Error starting training session: ", e);
-    }
+  const handleMachineSelection = async (machine: Machines) => {
+    if (!sessionId) return;
+    setSelectedMachine(machine); // Set the selected machine
+    setPickerType('reps'); // Trigger the PickerModal for reps
+    setShowMachinesList(false); // Disable the machine list as soon as a machine is selected
   };
 
-  const endTrainingSession = async () => {
-    if (sessionId) {
-      try {
-        const end_date = Timestamp.now();
-        const sessionRef = doc(firestore, 'training_sessions', sessionId);
-        await updateDoc(sessionRef, { end_date });
-        setSessionActive(false);
-        setMachines([]);
-      } catch (e) {
-        console.error("Error ending training session: ", e);
-      }
-    }
-  };
-
-  const handleAddMachineById = async (machineId: string) => {
-    if (sessionId) {
-      try {
-        const machineRef = doc(firestore, 'machines', machineId);
-        const machineSnap = await getDoc(machineRef);
-        if (machineSnap.exists()) {
-          const machine = { id: machineId, ...machineSnap.data() };
-          handleSelectMachine(machine);
-        } else {
-          console.error("No such machine!");
-        }
-      } catch (e) {
-        console.error("Error fetching machine:", e);
-      }
-    }
-  };
-
-  const handleSelectMachine = async (machine: any) => {
-    if (sessionId) {
-      const uniqueMachine = { ...machine, uniqueId: uuidv4() };
-      setMachines(prevMachines => [...prevMachines, uniqueMachine]);
-
-      try {
-        const sessionRef = doc(firestore, 'training_sessions', sessionId);
-        await updateDoc(sessionRef, {
-          machines: machines.map(m => doc(firestore, 'machines', m.id)).concat(doc(firestore, 'machines', machine.id))
-        });
-      } catch (e) {
-        console.error("Error adding machine to session: ", e);
-      }
-
-      setShowMachinesList(false);
+  const handlePickerConfirm = async (value: number) => {
+    if (pickerType === 'reps') {
+      setPendingSession((prev) => ({ ...prev, reps: value }));
+      setPickerType('weight');
+    } else if (pickerType === 'weight' && selectedMachine) {
+      const updatedSession = { ...pendingSession, weight: value };
+      await addMachineSession(sessionId, selectedMachine, updatedSession.reps!, updatedSession.weight!, machineSessions, setMachineSessions);
+      setPickerType(null);
+      setPendingSession({ reps: null, weight: null });
+      setSelectedMachine(null); // Clear the selected machine
     }
   };
 
   const handleQRScan = async () => {
-    setIsScanning(true); // Show overlay when scanning starts
-    const machineId = await startQRScan(); // Initiate the scan
-
+    setIsScanning(true);
+    const machineId = await startQRScan();
     if (machineId) {
-      handleAddMachineById(machineId); // Fetch and add machine if QR scan was successful
+      const machine = await handleAddMachineById(machineId);
+      if (machine) handleMachineSelection(machine); // Reuse machine selection logic
     }
-    
-    setIsScanning(false); // Hide overlay when scanning ends
-  };
-
-  const handleDeleteMachine = async (uniqueId: string, machineId: string) => {
-    setMachines(prevMachines => prevMachines.filter(machine => machine.uniqueId !== uniqueId));
-    if (sessionId) {
-      try {
-        const sessionRef = doc(firestore, 'training_sessions', sessionId);
-        await updateDoc(sessionRef, {
-          machines: machines.filter(machine => machine.uniqueId !== uniqueId).map(machine => doc(firestore, 'machines', machine.id))
-        });
-      } catch (e) {
-        console.error("Error removing machine from session: ", e);
-      }
-    }
+    setIsScanning(false);
   };
 
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>
-            {sessionActive ? `Session Time: ${formatTime(timer)}` : 'Training Session'}
-          </IonTitle>
+          <IonTitle>{sessionActive ? `Session Time: ${formatTime(timer)}` : 'Training Session'}</IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding">
-        {!sessionActive ? (
+        <IonButton color="danger" expand="full" onClick={() => endSession(sessionId, setSessionActive, setMachineSessions)} disabled={!sessionActive}>
+          End Session
+        </IonButton>
+        <IonButton onClick={() => setShowStartAlert(true)} disabled={sessionActive}>
+          Start Training
+        </IonButton>
+        <IonAlert
+          isOpen={showStartAlert}
+          onDidDismiss={() => setShowStartAlert(false)}
+          header={'Are you ready to pump?'}
+          buttons={[
+            { text: 'No', role: 'cancel' },
+            { text: 'Yes', handler: () => startSession(setSessionId, setSessionActive, setTimer) },
+          ]}
+        />
+
+        {sessionActive && (
           <>
-            <IonButton onClick={() => setShowStartAlert(true)}>Start Training</IonButton>
-            <IonAlert
-              isOpen={showStartAlert}
-              onDidDismiss={() => setShowStartAlert(false)}
-              header={'Are you ready to pump?'}
-              buttons={[
-                { text: 'No', role: 'cancel' },
-                { text: 'Yes', handler: () => startTrainingSession() }
-              ]}
-            />
-          </>
-        ) : (
-          <>
-            <IonButton color="danger" onClick={endTrainingSession}>End Session</IonButton>
-            <IonButton onClick={() => setShowMachinesList(!showMachinesList)}>Add Machines from the List</IonButton>
+            <IonButton onClick={() => setShowMachinesList(true)}>Add Machines from the List</IonButton>
             <IonButton onClick={handleQRScan}>Scan QR Code</IonButton>
           </>
         )}
-        
-        {showMachinesList && <AddMachinesFromTheList onSelectMachine={handleSelectMachine} />}
 
-        {/* Overlay shown only during scanning */}
-        {isScanning && (
-          <div className="camera-overlay">
-            Scanning...
-          </div>
+        {showMachinesList && (
+          <AddMachinesFromTheList
+            onSelectMachine={handleMachineSelection}
+          />
         )}
 
+        {isScanning && <div className="camera-overlay">Scanning...</div>}
+
         <IonList>
-          {machines.map(machine => (
-            <IonItem key={machine.uniqueId}>
-              {machine.title}
-              <IonIcon icon={trash} slot="end" onClick={() => handleDeleteMachine(machine.uniqueId, machine.id)} />
+          {machineSessions.map((session) => (
+            <IonItem key={session.id}>
+              <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+        <div>
+          <strong>Machine:</strong> {session.machine_ref.id}
+        </div>
+        {session.sets.map((set) => (
+          <p key={set.set_number}>
+            Set {set.set_number}: {set.reps} reps, {set.weight} kg
+          </p>
+        ))}
+      </div>
+              <IonIcon
+                icon={trash}
+                slot="end"
+                onClick={() => deleteMachineSession(session.id, sessionId, machineSessions, setMachineSessions)}
+              />
             </IonItem>
           ))}
         </IonList>
+
+        <PickerModal
+          isOpen={pickerType !== null}
+          pickerType={pickerType!}
+          onConfirm={handlePickerConfirm}
+          onCancel={() => {
+            setPickerType(null);
+            setShowMachinesList(false); // Disable the machine list if PickerModal is canceled
+          }}
+        />
       </IonContent>
     </IonPage>
   );
