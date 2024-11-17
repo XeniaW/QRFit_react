@@ -14,10 +14,15 @@ import {
 import { trash } from 'ionicons/icons';
 import { formatTime } from '../utils/TrainingSessionUtils';
 import { startQRScan, handleAddMachineById } from '../services/QRScannerService';
-import { startSession, endSession, addMachineSession, deleteMachineSession } from '../services/TrainingSessionService';
-import PickerModal from '../add_machines/picker/PickerModal';
+import {
+  startSession,
+  endSession,
+  addMachineSession,
+  deleteMachineSession,
+} from '../services/TrainingSessionService';
 import AddMachinesFromTheList from '../add_machines/from_list/AddMachinesFromTheList';
 import { Machines, MachineSession } from '../../../datamodels';
+import TextModal from '../add_machines/modal/TextModal';
 import './TrainingStart.css';
 
 const StartTrainingSession: React.FC = () => {
@@ -25,12 +30,11 @@ const StartTrainingSession: React.FC = () => {
   const [sessionActive, setSessionActive] = useState(false);
   const [timer, setTimer] = useState(0);
   const [machineSessions, setMachineSessions] = useState<MachineSession[]>([]);
-  const [showMachinesList, setShowMachinesList] = useState(false); // Controls visibility of the machine list
+  const [showMachinesList, setShowMachinesList] = useState(false);
   const [showStartAlert, setShowStartAlert] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [pickerType, setPickerType] = useState<'reps' | 'weight' | null>(null);
+  const [showTextModal, setShowTextModal] = useState(false); // Track modal visibility
   const [selectedMachine, setSelectedMachine] = useState<Machines | null>(null);
-  const [pendingSession, setPendingSession] = useState<{ reps: number | null; weight: number | null }>({ reps: null, weight: null });
 
   // Timer logic
   useEffect(() => {
@@ -43,22 +47,17 @@ const StartTrainingSession: React.FC = () => {
 
   const handleMachineSelection = async (machine: Machines) => {
     if (!sessionId) return;
-    setSelectedMachine(machine); // Set the selected machine
-    setPickerType('reps'); // Trigger the PickerModal for reps
-    setShowMachinesList(false); // Disable the machine list as soon as a machine is selected
+    setSelectedMachine(machine);
+    setShowMachinesList(false); // Hide machine list
+    setShowTextModal(true); // Open text modal
   };
 
-  const handlePickerConfirm = async (value: number) => {
-    if (pickerType === 'reps') {
-      setPendingSession((prev) => ({ ...prev, reps: value }));
-      setPickerType('weight');
-    } else if (pickerType === 'weight' && selectedMachine) {
-      const updatedSession = { ...pendingSession, weight: value };
-      await addMachineSession(sessionId, selectedMachine, updatedSession.reps!, updatedSession.weight!, machineSessions, setMachineSessions);
-      setPickerType(null);
-      setPendingSession({ reps: null, weight: null });
-      setSelectedMachine(null); // Clear the selected machine
+  const handleTextModalConfirm = async (reps: number, weight: number) => {
+    if (selectedMachine && sessionId) {
+      await addMachineSession(sessionId, selectedMachine, reps, weight, machineSessions, setMachineSessions);
+      setSelectedMachine(null);
     }
+    setShowTextModal(false); // Close modal
   };
 
   const handleQRScan = async () => {
@@ -66,7 +65,7 @@ const StartTrainingSession: React.FC = () => {
     const machineId = await startQRScan();
     if (machineId) {
       const machine = await handleAddMachineById(machineId);
-      if (machine) handleMachineSelection(machine); // Reuse machine selection logic
+      if (machine) handleMachineSelection(machine);
     }
     setIsScanning(false);
   };
@@ -102,11 +101,7 @@ const StartTrainingSession: React.FC = () => {
           </>
         )}
 
-        {showMachinesList && (
-          <AddMachinesFromTheList
-            onSelectMachine={handleMachineSelection}
-          />
-        )}
+        {showMachinesList && <AddMachinesFromTheList onSelectMachine={handleMachineSelection} />}
 
         {isScanning && <div className="camera-overlay">Scanning...</div>}
 
@@ -114,15 +109,15 @@ const StartTrainingSession: React.FC = () => {
           {machineSessions.map((session) => (
             <IonItem key={session.id}>
               <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-        <div>
-          <strong>Machine:</strong> {session.machine_ref.id}
-        </div>
-        {session.sets.map((set) => (
-          <p key={set.set_number}>
-            Set {set.set_number}: {set.reps} reps, {set.weight} kg
-          </p>
-        ))}
-      </div>
+                <div>
+                  <strong>Machine:</strong> {session.machine_ref.id}
+                </div>
+                {session.sets.map((set) => (
+                  <p key={set.set_number}>
+                    Set {set.set_number}: {set.reps} reps, {set.weight} kg
+                  </p>
+                ))}
+              </div>
               <IonIcon
                 icon={trash}
                 slot="end"
@@ -132,14 +127,10 @@ const StartTrainingSession: React.FC = () => {
           ))}
         </IonList>
 
-        <PickerModal
-          isOpen={pickerType !== null}
-          pickerType={pickerType!}
-          onConfirm={handlePickerConfirm}
-          onCancel={() => {
-            setPickerType(null);
-            setShowMachinesList(false); // Disable the machine list if PickerModal is canceled
-          }}
+        <TextModal
+          isOpen={showTextModal}
+          onConfirm={handleTextModalConfirm}
+          onCancel={() => setShowTextModal(false)}
         />
       </IonContent>
     </IonPage>
