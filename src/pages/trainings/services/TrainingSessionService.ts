@@ -1,5 +1,5 @@
 import { firestore } from '../../../firebase';
-import { collection, addDoc, doc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc,deleteDoc, arrayUnion, Timestamp } from 'firebase/firestore';
 import { Machines, MachineSession } from '../../../datamodels';
 
 export const startSession = async (setSessionId: any, setSessionActive: any, setTimer: any) => {
@@ -81,17 +81,32 @@ export const deleteMachineSession = async (
   uniqueId: string,
   sessionId: string | null,
   machineSessions: MachineSession[],
-  setMachineSessions: any
+  setMachineSessions: React.Dispatch<React.SetStateAction<MachineSession[]>>
 ) => {
-  setMachineSessions((prevMachines: MachineSession[]) => prevMachines.filter((machine) => machine.id !== uniqueId));
+  // Update the local state
+  setMachineSessions((prevMachines: MachineSession[]) =>
+    prevMachines.filter((machine) => machine.id !== uniqueId)
+  );
+
   if (sessionId) {
     try {
-      const sessionRef = doc(firestore, 'training_sessions', sessionId);
+      // Update the training session document in Firestore
+      const sessionRef = doc(firestore, "training_sessions", sessionId);
+      const updatedMachineSessions = machineSessions
+        .filter((machine) => machine.id !== uniqueId)
+        .map((machine) => machine.id);
+
       await updateDoc(sessionRef, {
-        machine_sessions: machineSessions.filter((machine) => machine.id !== uniqueId).map((machine) => machine.id),
+        machine_sessions: updatedMachineSessions,
       });
+
+      // Delete the machine session document from Firestore
+      const machineSessionRef = doc(firestore, "machine_sessions", uniqueId);
+      await deleteDoc(machineSessionRef);
+
+      console.log(`Machine session with ID ${uniqueId} deleted successfully.`);
     } catch (e) {
-      console.error('Error removing machine from session:', e);
+      console.error("Error removing machine session:", e);
     }
   }
 };

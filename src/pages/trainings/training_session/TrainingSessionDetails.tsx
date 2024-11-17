@@ -11,7 +11,7 @@ import {
 } from '@ionic/react';
 import { useEffect, useState } from 'react';
 import { firestore } from '../../../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, DocumentReference } from 'firebase/firestore';
 import {
   convertFirestoreTimestampToDate,
   calculateDuration,
@@ -41,7 +41,7 @@ const TrainingSessionDetails: React.FC = () => {
         const sessionData = sessionDoc.data() as TrainingSessions;
         setTrainingSession(sessionData);
 
-        // Fetch machine_sessions and their corresponding machines and sets
+        // Fetch machine_sessions and resolve machine references
         const machineSessionPromises = sessionData.machine_sessions.map(async (machineSessionId) => {
           const machineSessionRef = doc(firestore, 'machine_sessions', machineSessionId);
           const machineSessionDoc = await getDoc(machineSessionRef);
@@ -49,8 +49,8 @@ const TrainingSessionDetails: React.FC = () => {
           if (machineSessionDoc.exists()) {
             const machineSessionData = machineSessionDoc.data() as MachineSession;
 
-            // Fetch machine details using machine_ref
-            const machineRef = machineSessionData.machine_ref;
+            // Fetch machine details using machine_ref (DocumentReference)
+            const machineRef = machineSessionData.machine_ref as DocumentReference;
             const machineDoc = await getDoc(machineRef);
             if (machineDoc.exists()) {
               return {
