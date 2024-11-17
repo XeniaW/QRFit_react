@@ -18,6 +18,7 @@ export interface MachineSession {
     machine_ref: DocumentReference; // Reference to the machine
     date_used: Timestamp; // Timestamp of when the machine was used
     sets: SetDetail[]; // Array of sets for this machine session
+    user_id: string; // ID of the user who owns this session
   }
 
 export interface TrainingSessions {
@@ -25,4 +26,5 @@ export interface TrainingSessions {
     start_date: { seconds: number; nanoseconds: number }; // Include nanoseconds with a default of 0 if missing
     end_date: { seconds: number; nanoseconds: number };
     machine_sessions: string[];   // Array of references to machines
+    user_id: string; // ID of the user who owns this session
   }

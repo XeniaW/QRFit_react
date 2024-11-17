@@ -1,12 +1,17 @@
-import React, { useContext } from "react";
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from './firebase';
 
-
-interface Auth {
+export interface Auth {
     loggedIn: boolean;
-    userId?: string;
-}
-export const AuthContext = React.createContext({loggedIn: false });
+    userId: string | null; // Allow null instead of undefined
+    email?: string | null; // Optional email
+  }
+  
+  export const AuthContext = React.createContext<Auth>({
+    loggedIn: false,
+    email: null,
+    userId: null, // Default to null
+  })
 
-export function useAuth() {
-    return useContext(AuthContext);
-}
+export const useAuth = () => useContext(AuthContext);

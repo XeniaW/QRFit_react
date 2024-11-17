@@ -43,7 +43,7 @@ export const calculateDuration = (startDate: Date, endDate: Date) => {
  * @param id Firestore document ID of the training session to delete
  * @returns Promise that resolves once the deletion is complete
  */
-export const deleteTrainingSession = async (id: string) => {
+export const deleteTrainingSession = async (id: string, userId: string) => {
   try {
     // Step 1: Fetch the training session document
     const sessionRef = doc(firestore, "training_sessions", id);
@@ -54,6 +54,10 @@ export const deleteTrainingSession = async (id: string) => {
     }
 
     const sessionData = sessionDoc.data();
+    if (sessionData.user_id !== userId) {
+      console.error("Unauthorized deletion attempt");
+      return;
+    }
     if (!sessionData?.machine_sessions || !Array.isArray(sessionData.machine_sessions)) {
       throw new Error("Invalid training session data or no machine_sessions found.");
     }
@@ -71,7 +75,7 @@ export const deleteTrainingSession = async (id: string) => {
 
     // Step 3: Delete the training session document
     await deleteDoc(sessionRef);
-    console.log(`Training session with ID ${id} deleted successfully along with its machine sessions.`);
+    console.log(`Training session with ID ${id} deleted successfully along with its machine sessions for user ${userId}.`);
   } catch (error) {
     console.error("Error deleting training session and its machine sessions:", error);
     throw error; // Rethrow the error to handle in the component

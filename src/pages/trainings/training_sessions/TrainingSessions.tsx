@@ -1,25 +1,38 @@
 import { IonRow, IonCol, IonContent, IonHeader, IonButtons, IonBackButton, IonPage, IonTitle, IonToolbar, IonList, IonItem } from '@ionic/react';
 import { useState } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { useAuth } from '../../../auth';
+import { collection, getDocs,query,where } from 'firebase/firestore';
 import { firestore } from '../../../firebase';
 import { useIonViewWillEnter } from '@ionic/react';
 
 import { convertFirestoreTimestampToDate, calculateDuration } from '../utils/TrainingSessionUtils';
 
 const TrainingSessions: React.FC = () => {
+  const { userId } = useAuth(); // Get the userId from the AuthContext
   const [trainingSessions, setTrainingSessions] = useState<any[]>([]);
   const trainingSessionRef = collection(firestore, "training_sessions");
 
-  // Fetch training sessions from Firestore
   const fetchTrainingSessions = async () => {
-    const data = await getDocs(trainingSessionRef);
-    setTrainingSessions(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+    if (!userId) {
+      console.error("User is not authenticated.");
+      return;
+    }
+
+    const q = query(trainingSessionRef, where("user_id", "==", userId)); // Filter by user_id
+
+    try {
+      const data = await getDocs(q);
+      setTrainingSessions(data.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
+    } catch (error) {
+      console.error("Error fetching training sessions:", error);
+    }
   };
 
   // Refresh data every time the view is displayed
   useIonViewWillEnter(() => {
     fetchTrainingSessions();
   });
+
 
   return (
     <IonPage>

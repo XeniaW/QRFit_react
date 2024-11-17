@@ -24,6 +24,7 @@ import AddMachinesFromTheList from '../add_machines/from_list/AddMachinesFromThe
 import { Machines, MachineSession } from '../../../datamodels';
 import TextModal from '../add_machines/modal/TextModal';
 import './TrainingStart.css';
+import { useAuth } from '../../../auth';
 
 const StartTrainingSession: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -35,6 +36,7 @@ const StartTrainingSession: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [showTextModal, setShowTextModal] = useState(false); // Track modal visibility
   const [selectedMachine, setSelectedMachine] = useState<Machines | null>(null);
+  const { userId } = useAuth();
 
   // Timer logic
   useEffect(() => {
@@ -54,7 +56,7 @@ const StartTrainingSession: React.FC = () => {
 
   const handleTextModalConfirm = async (reps: number, weight: number) => {
     if (selectedMachine && sessionId) {
-      await addMachineSession(sessionId, selectedMachine, reps, weight, machineSessions, setMachineSessions);
+      await addMachineSession(userId!,sessionId, selectedMachine, reps, weight, machineSessions, setMachineSessions);
       setSelectedMachine(null);
     }
     setShowTextModal(false); // Close modal
@@ -90,7 +92,7 @@ const StartTrainingSession: React.FC = () => {
           header={'Are you ready to pump?'}
           buttons={[
             { text: 'No', role: 'cancel' },
-            { text: 'Yes', handler: () => startSession(setSessionId, setSessionActive, setTimer) },
+            { text: 'Yes', handler: () => startSession(userId!,setSessionId, setSessionActive, setTimer) },
           ]}
         />
 

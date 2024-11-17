@@ -1,28 +1,22 @@
-import { IonApp, IonLabel, IonLoading, IonRouterOutlet, IonSplitPane, IonTabBar,IonTabs, IonTabButton, setupIonicReact, } from '@ionic/react';
-import { IonReactRouter  } from '@ionic/react-router';
+import {
+  IonApp,
+  IonLoading,
+  setupIonicReact
+} from '@ionic/react';
 import { Redirect, Route, Switch } from 'react-router-dom';
 import { AuthContext } from "./auth";
+import { IonReactRouter } from '@ionic/react-router';
 
 import Registration from './pages/registration/Registration';
-import Login from './pages/login/Login'
-import Home  from './pages/home/Home';
-import PWRecovery from './pages/pw-recovery/PWRecovery';
-import Training from './pages/UserView/training/Training';
-import Statistics from './pages/UserView/statistics/Statistics';
-import Settings from './pages/UserView/settings/Settings';
-import Advisor from './pages/UserView/advisor/Advisor';
-import Machines from './pages/machines/Machines';
+import Login from './pages/login/Login';
+import Home from './pages/home/Home';
 import AppTabs from './AppTabs';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
-
-/* Basic CSS for apps built with Ionic */
 import '@ionic/react/css/normalize.css';
 import '@ionic/react/css/structure.css';
 import '@ionic/react/css/typography.css';
-
-/* Optional CSS utils that can be commented out */
 import '@ionic/react/css/padding.css';
 import '@ionic/react/css/float-elements.css';
 import '@ionic/react/css/text-alignment.css';
@@ -33,55 +27,78 @@ import '@ionic/react/css/display.css';
 /* Theme variables */
 import './theme/variables.css';
 import { useEffect, useState } from 'react';
-import {onAuthStateChanged} from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { auth } from './firebase';
-
-
-
-
 
 setupIonicReact();
 
-
-
-
 const App: React.FC = () => {
-  const [authState, setAuthState] = useState({loading:true, loggedIn:false});
+  const [authState, setAuthState] = useState<{
+    loading: boolean;
+    loggedIn: boolean;
+    userId: string | null;
+    email: string | null;
+  }>({
+    loading: true,
+    loggedIn: false,
+    userId: null,
+    email: null,
+  });
+
   useEffect(() => {
-    onAuthStateChanged(auth,(currentUser) => {
-      setAuthState({loading:false, loggedIn:Boolean(currentUser)});
-      // console.log(currentUser)
-      // if (authState.loggedIn == false) {
-      //   console.log("not logged");
-      // }
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        // User is logged in
+        setAuthState({
+          loading: false,
+          loggedIn: true,
+          userId: currentUser.uid,
+          email: currentUser.email || null,
+        });
+      } else {
+        // User is not logged in
+        setAuthState({
+          loading: false,
+          loggedIn: false,
+          userId: null,
+          email: null,
+        });
+      }
     });
-  }, []); // remembers the authentication state even if the app reloads
 
+    return () => unsubscribe(); // Cleanup subscription on unmount
+  }, []);
 
-  // console.log(`rendering App with authState`, authState);
+  console.log(`Rendering App with authState:`, authState);
+
+  // Show loading spinner while checking authentication state
   if (authState.loading) {
-    return <IonLoading isOpen />
+    return <IonLoading isOpen />;
   }
- 
+
   return (
     <IonApp>
-      <AuthContext.Provider value ={{loggedIn: authState.loggedIn}}>
-      <IonReactRouter>
-      <Switch>
-        <Route exact path="/" component={Home} />
-        <Route exact path="/login">
-            <Login />   
-        </Route>
-        <Route exact path="/registration">
-            <Registration />   
-        </Route>
-        <Route path="/my">
+      {/* Pass userId and email through AuthContext */}
+      <AuthContext.Provider value={{
+        loggedIn: authState.loggedIn,
+        userId: authState.userId,
+        email: authState.email,
+      }}>
+        <IonReactRouter>
+          <Switch>
+            <Route exact path="/" component={Home} />
+            <Route exact path="/login">
+              <Login />
+            </Route>
+            <Route exact path="/registration">
+              <Registration />
+            </Route>
+            <Route path="/my">
               <AppTabs />
-        </Route>
-        <Redirect exact path="/" to="/my/training" />
-      
-        </Switch>     
-      </IonReactRouter>
+            </Route>
+            <Redirect exact path="/" to="/my/training" />
+          </Switch>
+        </IonReactRouter>
       </AuthContext.Provider>
     </IonApp>
   );

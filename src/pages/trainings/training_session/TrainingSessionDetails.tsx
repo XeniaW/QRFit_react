@@ -17,6 +17,7 @@ import {
   calculateDuration,
   deleteTrainingSession,
 } from '../utils/TrainingSessionUtils';
+import { useAuth } from '../../../auth';
 import { useParams, useHistory } from 'react-router-dom';
 import { Machines, TrainingSessions, MachineSession } from '../../../datamodels';
 
@@ -31,12 +32,19 @@ const TrainingSessionDetails: React.FC = () => {
   const [machineDetails, setMachineDetails] = useState<MachineDetails[]>([]); // Store machine and set details
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const history = useHistory();
+  const { userId } = useAuth(); // Fetch the current user's ID from AuthContext
+
+
 
   useEffect(() => {
     const fetchSession = async () => {
       const sessionRef = doc(firestore, 'training_sessions', id);
       const sessionDoc = await getDoc(sessionRef);
 
+      if (!userId) {
+        console.error("User is not authenticated");
+        return;
+      }
       if (sessionDoc.exists()) {
         const sessionData = sessionDoc.data() as TrainingSessions;
         setTrainingSession(sessionData);
@@ -74,8 +82,13 @@ const TrainingSessionDetails: React.FC = () => {
   }, [id]);
 
   const handleDelete = async () => {
+    if (!userId) {
+      console.error("User is not authenticated.");
+      return;
+    }
+  
     try {
-      await deleteTrainingSession(id);
+      await deleteTrainingSession(id, userId); // Pass userId as the second argument
       history.push('/my/sessions'); // Redirect back to sessions list after deletion
     } catch (error) {
       console.error('Error deleting document:', error);
