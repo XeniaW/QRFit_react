@@ -10,9 +10,12 @@ import {
   IonItem,
   IonIcon,
   IonAlert,
+  IonAccordionGroup,
+  IonAccordion,
+  IonLabel,
 } from '@ionic/react';
-import { trash } from 'ionicons/icons';
-import { formatTime } from '../utils/TrainingSessionUtils';
+import { trash, add, remove } from 'ionicons/icons';
+import { formatTime, addSet, removeSet } from '../utils/TrainingSessionUtils';
 import { startQRScan, handleAddMachineById } from '../services/QRScannerService';
 import {
   startSession,
@@ -34,7 +37,8 @@ const StartTrainingSession: React.FC = () => {
   const [showMachinesList, setShowMachinesList] = useState(false);
   const [showStartAlert, setShowStartAlert] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [showTextModal, setShowTextModal] = useState(false); // Track modal visibility
+  const [showTextModal, setShowTextModal] = useState(false);
+  const [selectedSessionIndex, setSelectedSessionIndex] = useState<number | null>(null);
   const [selectedMachine, setSelectedMachine] = useState<Machines | null>(null);
   const { userId } = useAuth();
 
@@ -49,17 +53,72 @@ const StartTrainingSession: React.FC = () => {
 
   const handleMachineSelection = async (machine: Machines) => {
     if (!sessionId) return;
-    setSelectedMachine(machine);
-    setShowMachinesList(false); // Hide machine list
-    setShowTextModal(true); // Open text modal
+
+    try {
+      setSelectedMachine(machine);
+      setShowMachinesList(false); // Hide machine list
+      setShowTextModal(true); // Open text modal
+    } catch (error) {
+      console.error('Error selecting machine:', error);
+    }
+  };
+
+  const handleAddSetToSession = async (reps: number, weight: number) => {
+    if (selectedSessionIndex !== null && sessionId) {
+      const machineSessionId = machineSessions[selectedSessionIndex].id;
+
+      try {
+        const updatedSessions = await addSet(
+          machineSessions,
+          selectedSessionIndex,
+          machineSessionId,
+          reps,
+          weight
+        );
+        setMachineSessions(updatedSessions);
+      } catch (error) {
+        console.error('Failed to add set:', error);
+      }
+    }
+
+    setShowTextModal(false);
+    setSelectedSessionIndex(null);
+  };
+
+  const handleRemoveSet = async (sessionIndex: number, setIndex: number) => {
+    const machineSessionId = machineSessions[sessionIndex].id;
+
+    try {
+      const updatedSessions = await removeSet(
+        machineSessions,
+        sessionIndex,
+        setIndex,
+        machineSessionId
+      );
+      setMachineSessions(updatedSessions);
+    } catch (error) {
+      console.error('Failed to remove set:', error);
+    }
   };
 
   const handleTextModalConfirm = async (reps: number, weight: number) => {
     if (selectedMachine && sessionId) {
-      await addMachineSession(userId!,sessionId, selectedMachine, reps, weight, machineSessions, setMachineSessions);
-      setSelectedMachine(null);
+      try {
+        await addMachineSession(
+          userId!,
+          sessionId,
+          selectedMachine,
+          reps,
+          weight,
+          machineSessions,
+          setMachineSessions
+        );
+        setSelectedMachine(null);
+      } catch (error) {
+        console.error('Error adding machine session:', error);
+      }
     }
-    setShowTextModal(false); // Close modal
+    setShowTextModal(false);
   };
 
   const handleQRScan = async () => {
@@ -80,7 +139,12 @@ const StartTrainingSession: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding">
-        <IonButton color="danger" expand="full" onClick={() => endSession(sessionId, setSessionActive, setMachineSessions)} disabled={!sessionActive}>
+        <IonButton
+          color="danger"
+          expand="full"
+          onClick={() => endSession(sessionId, setSessionActive, setMachineSessions)}
+          disabled={!sessionActive}
+        >
           End Session
         </IonButton>
         <IonButton onClick={() => setShowStartAlert(true)} disabled={sessionActive}>
@@ -92,7 +156,7 @@ const StartTrainingSession: React.FC = () => {
           header={'Are you ready to pump?'}
           buttons={[
             { text: 'No', role: 'cancel' },
-            { text: 'Yes', handler: () => startSession(userId!,setSessionId, setSessionActive, setTimer) },
+            { text: 'Yes', handler: () => startSession(userId!, setSessionId, setSessionActive, setTimer) },
           ]}
         />
 
@@ -107,32 +171,56 @@ const StartTrainingSession: React.FC = () => {
 
         {isScanning && <div className="camera-overlay">Scanning...</div>}
 
-        <IonList>
-          {machineSessions.map((session) => (
-            <IonItem key={session.id}>
-              <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                <div>
+        <IonAccordionGroup>
+          {machineSessions.map((session, sessionIndex) => (
+            <IonAccordion key={session.id} value={session.id}>
+              <IonItem slot="header" color="light">
+                <IonLabel>
                   <strong>Machine:</strong> {session.machine_ref.id}
-                </div>
-                {session.sets.map((set) => (
-                  <p key={set.set_number}>
-                    Set {set.set_number}: {set.reps} reps, {set.weight} kg
-                  </p>
+                </IonLabel>
+                <IonIcon
+                  icon={trash}
+                  slot="end"
+                  onClick={() =>
+                    deleteMachineSession(session.id, sessionId, machineSessions, setMachineSessions)
+                  }
+                />
+              </IonItem>
+              <div className="ion-padding" slot="content">
+                {session.sets.map((set, setIndex) => (
+                  <IonItem key={set.set_number}>
+                    <IonLabel>
+                      Set {set.set_number}: {set.reps} reps, {set.weight} kg
+                    </IonLabel>
+                    <IonIcon
+                      icon={remove}
+                      slot="end"
+                      onClick={() => handleRemoveSet(sessionIndex, setIndex)}
+                    />
+                  </IonItem>
                 ))}
+                <IonItem
+                  button
+                  onClick={() => {
+                    setSelectedSessionIndex(sessionIndex);
+                    setShowTextModal(true);
+                  }}
+                >
+                  <IonLabel>Add New Set</IonLabel>
+                  <IonIcon icon={add} slot="end" />
+                </IonItem>
               </div>
-              <IonIcon
-                icon={trash}
-                slot="end"
-                onClick={() => deleteMachineSession(session.id, sessionId, machineSessions, setMachineSessions)}
-              />
-            </IonItem>
+            </IonAccordion>
           ))}
-        </IonList>
+        </IonAccordionGroup>
 
         <TextModal
           isOpen={showTextModal}
-          onConfirm={handleTextModalConfirm}
-          onCancel={() => setShowTextModal(false)}
+          onConfirm={selectedSessionIndex !== null ? handleAddSetToSession : handleTextModalConfirm}
+          onCancel={() => {
+            setShowTextModal(false);
+            setSelectedSessionIndex(null);
+          }}
         />
       </IonContent>
     </IonPage>

@@ -1,5 +1,5 @@
 import { firestore } from '../../../firebase';
-import { deleteDoc, doc, getDoc } from 'firebase/firestore';
+import { deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 
 /**
  * Convert Firestore Timestamp to JavaScript Date
@@ -92,4 +92,82 @@ export const formatTime = (seconds: number): string => {
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+};
+
+/**
+ * Adds a new set to the specified session in the machineSessions array
+ * and updates the Firestore database.
+ * @param {Array} machineSessions - The array of machine sessions.
+ * @param {Number} sessionIndex - The index of the session to add the set to.
+ * @param {String} machineSessionId - The Firestore document ID for the machine session.
+ * @returns {Array} Updated machineSessions with the new set added.
+ */
+export const addSet = async (
+  machineSessions,
+  sessionIndex,
+  machineSessionId,
+  reps = 0,
+  weight = 0
+) => {
+  const updatedSessions = [...machineSessions];
+  const newSet = {
+    set_number: updatedSessions[sessionIndex].sets.length + 1,
+    reps,
+    weight,
+  };
+
+  updatedSessions[sessionIndex].sets.push(newSet);
+
+  // Update Firestore with the new set
+  const sessionRef = doc(firestore, 'machine_sessions', machineSessionId);
+  try {
+    await updateDoc(sessionRef, {
+      sets: updatedSessions[sessionIndex].sets,
+    });
+  } catch (error) {
+    console.error('Error updating sets in Firestore:', error);
+    throw error;
+  }
+
+  return updatedSessions;
+};
+
+/**
+ * Removes a set from the specified session in the machineSessions array
+ * and updates Firestore.
+ * @param {Array} machineSessions - The array of machine sessions.
+ * @param {Number} sessionIndex - The index of the session to remove the set from.
+ * @param {Number} setIndex - The index of the set to remove.
+ * @param {String} machineSessionId - The Firestore document ID for the machine session.
+ * @returns {Array} Updated machineSessions with the set removed.
+ */
+export const removeSet = async (
+  machineSessions,
+  sessionIndex,
+  setIndex,
+  machineSessionId
+) => {
+  const updatedSessions = [...machineSessions];
+  const session = updatedSessions[sessionIndex];
+
+  // Remove the set from the array
+  session.sets.splice(setIndex, 1);
+
+  // Reassign set numbers to maintain proper order
+  session.sets.forEach((set, index) => {
+    set.set_number = index + 1;
+  });
+
+  // Update Firestore with the updated sets
+  const sessionRef = doc(firestore, 'machine_sessions', machineSessionId);
+  try {
+    await updateDoc(sessionRef, {
+      sets: session.sets,
+    });
+  } catch (error) {
+    console.error('Error updating sets in Firestore:', error);
+    throw error;
+  }
+
+  return updatedSessions;
 };
