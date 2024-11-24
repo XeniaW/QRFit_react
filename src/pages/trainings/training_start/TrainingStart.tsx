@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   IonButton,
   IonContent,
@@ -13,21 +13,24 @@ import {
   IonAccordionGroup,
   IonAccordion,
   IonLabel,
-} from '@ionic/react';
-import { trash, add, remove } from 'ionicons/icons';
-import { formatTime, addSet, removeSet } from '../utils/TrainingSessionUtils';
-import { startQRScan, handleAddMachineById } from '../services/QRScannerService';
+} from "@ionic/react";
+import { trash, add, remove } from "ionicons/icons";
+import { formatTime, addSet, removeSet } from "../utils/TrainingSessionUtils";
+import {
+  startQRScan,
+  handleAddMachineById,
+} from "../services/QRScannerService";
 import {
   startSession,
   endSession,
   addMachineSession,
   deleteMachineSession,
-} from '../services/TrainingSessionService';
-import AddMachinesFromTheList from '../add_machines/from_list/AddMachinesFromTheList';
-import { Machines, MachineSession } from '../../../datamodels';
-import TextModal from '../add_machines/modal/TextModal';
-import './TrainingStart.css';
-import { useAuth } from '../../../auth';
+} from "../services/TrainingSessionService";
+import AddMachinesFromTheList from "../add_machines/from_list/AddMachinesFromTheList";
+import { Machines, MachineSession } from "../../../datamodels";
+import TextModal from "../add_machines/modal/TextModal";
+import "./TrainingStart.css";
+import { useAuth } from "../../../auth";
 
 const StartTrainingSession: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -36,17 +39,22 @@ const StartTrainingSession: React.FC = () => {
   const [machineSessions, setMachineSessions] = useState<MachineSession[]>([]);
   const [showMachinesList, setShowMachinesList] = useState(false);
   const [showStartAlert, setShowStartAlert] = useState(false);
+  const [showEndAlert, setShowEndAlert] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [showTextModal, setShowTextModal] = useState(false);
-  const [selectedSessionIndex, setSelectedSessionIndex] = useState<number | null>(null);
+  const [selectedSessionIndex, setSelectedSessionIndex] = useState<
+    number | null
+  >(null);
   const [selectedMachine, setSelectedMachine] = useState<Machines | null>(null);
   const { userId } = useAuth();
 
-  // Timer logic
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (sessionActive) {
-      interval = setInterval(() => setTimer((prevTimer) => prevTimer + 1), 1000);
+      interval = setInterval(
+        () => setTimer((prevTimer) => prevTimer + 1),
+        1000
+      );
     }
     return () => interval && clearInterval(interval);
   }, [sessionActive]);
@@ -56,10 +64,10 @@ const StartTrainingSession: React.FC = () => {
 
     try {
       setSelectedMachine(machine);
-      setShowMachinesList(false); // Hide machine list
-      setShowTextModal(true); // Open text modal
+      setShowMachinesList(false);
+      setShowTextModal(true);
     } catch (error) {
-      console.error('Error selecting machine:', error);
+      console.error("Error selecting machine:", error);
     }
   };
 
@@ -77,7 +85,7 @@ const StartTrainingSession: React.FC = () => {
         );
         setMachineSessions(updatedSessions);
       } catch (error) {
-        console.error('Failed to add set:', error);
+        console.error("Failed to add set:", error);
       }
     }
 
@@ -97,7 +105,7 @@ const StartTrainingSession: React.FC = () => {
       );
       setMachineSessions(updatedSessions);
     } catch (error) {
-      console.error('Failed to remove set:', error);
+      console.error("Failed to remove set:", error);
     }
   };
 
@@ -115,7 +123,7 @@ const StartTrainingSession: React.FC = () => {
         );
         setSelectedMachine(null);
       } catch (error) {
-        console.error('Error adding machine session:', error);
+        console.error("Error adding machine session:", error);
       }
     }
     setShowTextModal(false);
@@ -131,45 +139,95 @@ const StartTrainingSession: React.FC = () => {
     setIsScanning(false);
   };
 
+  const handleCancelQRScan = () => {
+    setIsScanning(false); // Stop scanning process
+  };
+
+  const handleEndTraining = () => {
+    setShowEndAlert(true);
+  };
+
+  const confirmEndTraining = () => {
+    endSession(sessionId, setSessionActive, setMachineSessions);
+    setShowEndAlert(false);
+  };
+
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>{sessionActive ? `Session Time: ${formatTime(timer)}` : 'Training Session'}</IonTitle>
+          <IonTitle>
+            {sessionActive
+              ? `Session Time: ${formatTime(timer)}`
+              : "Training Session"}
+          </IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding">
-        <IonButton
-          color="danger"
-          expand="full"
-          onClick={() => endSession(sessionId, setSessionActive, setMachineSessions)}
-          disabled={!sessionActive}
-        >
-          End Session
-        </IonButton>
-        <IonButton onClick={() => setShowStartAlert(true)} disabled={sessionActive}>
-          Start Training
-        </IonButton>
+        {!sessionActive && (
+          <IonButton
+            onClick={() => setShowStartAlert(true)}
+            disabled={sessionActive}
+          >
+            Start Training
+          </IonButton>
+        )}
+        {sessionActive && (
+          <IonButton color="danger" expand="full" onClick={handleEndTraining}>
+            End Training
+          </IonButton>
+        )}
         <IonAlert
           isOpen={showStartAlert}
           onDidDismiss={() => setShowStartAlert(false)}
-          header={'Are you ready to pump?'}
+          header={"Are you ready to pump?"}
           buttons={[
-            { text: 'No', role: 'cancel' },
-            { text: 'Yes', handler: () => startSession(userId!, setSessionId, setSessionActive, setTimer) },
+            { text: "No", role: "cancel" },
+            {
+              text: "Yes",
+              handler: () =>
+                startSession(userId!, setSessionId, setSessionActive, setTimer),
+            },
+          ]}
+        />
+        <IonAlert
+          isOpen={showEndAlert}
+          onDidDismiss={() => setShowEndAlert(false)}
+          header={"Are you proud of yourself?"}
+          buttons={[
+            { text: "No", role: "cancel" },
+            {
+              text: "Yes",
+              handler: confirmEndTraining,
+            },
           ]}
         />
 
         {sessionActive && (
           <>
-            <IonButton onClick={() => setShowMachinesList(true)}>Add Machines from the List</IonButton>
+            <IonButton onClick={() => setShowMachinesList(true)}>
+              Add Machines from the List
+            </IonButton>
             <IonButton onClick={handleQRScan}>Scan QR Code</IonButton>
           </>
         )}
 
-        {showMachinesList && <AddMachinesFromTheList onSelectMachine={handleMachineSelection} />}
+        {showMachinesList && (
+          <AddMachinesFromTheList onSelectMachine={handleMachineSelection} />
+        )}
 
-        {isScanning && <div className="camera-overlay">Scanning...</div>}
+        {isScanning && (
+          <div className="camera-overlay">
+            <p>Scanning...</p>
+            <IonButton
+              className="cancel-button"
+              color="light"
+              onClick={handleCancelQRScan}
+            >
+              Cancel
+            </IonButton>
+          </div>
+        )}
 
         <IonAccordionGroup>
           {machineSessions.map((session, sessionIndex) => (
@@ -182,7 +240,12 @@ const StartTrainingSession: React.FC = () => {
                   icon={trash}
                   slot="end"
                   onClick={() =>
-                    deleteMachineSession(session.id, sessionId, machineSessions, setMachineSessions)
+                    deleteMachineSession(
+                      session.id,
+                      sessionId,
+                      machineSessions,
+                      setMachineSessions
+                    )
                   }
                 />
               </IonItem>
@@ -216,7 +279,11 @@ const StartTrainingSession: React.FC = () => {
 
         <TextModal
           isOpen={showTextModal}
-          onConfirm={selectedSessionIndex !== null ? handleAddSetToSession : handleTextModalConfirm}
+          onConfirm={
+            selectedSessionIndex !== null
+              ? handleAddSetToSession
+              : handleTextModalConfirm
+          }
           onCancel={() => {
             setShowTextModal(false);
             setSelectedSessionIndex(null);
