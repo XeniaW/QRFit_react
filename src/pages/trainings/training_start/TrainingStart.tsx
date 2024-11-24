@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   IonButton,
   IonContent,
@@ -6,37 +6,56 @@ import {
   IonPage,
   IonTitle,
   IonToolbar,
-  IonList,
-  IonItem,
-  IonIcon,
   IonAlert,
   IonAccordionGroup,
   IonAccordion,
+  IonItem,
+  IonIcon,
   IonLabel,
-} from "@ionic/react";
-import { trash, add, remove } from "ionicons/icons";
-import { formatTime, addSet, removeSet } from "../utils/TrainingSessionUtils";
+  IonButtons,
+} from '@ionic/react';
+import { trash, add, remove } from 'ionicons/icons';
+import {
+  formatTime,
+  addSet,
+  removeSet,
+} from '../../../utils/TrainingSessionUtils';
 import {
   startQRScan,
   handleAddMachineById,
-} from "../services/QRScannerService";
+} from '../../../services/QRScannerService';
 import {
   startSession,
   endSession,
   addMachineSession,
   deleteMachineSession,
-} from "../services/TrainingSessionService";
-import AddMachinesFromTheList from "../add_machines/from_list/AddMachinesFromTheList";
-import { Machines, MachineSession } from "../../../datamodels";
-import TextModal from "../add_machines/modal/TextModal";
-import "./TrainingStart.css";
-import { useAuth } from "../../../auth";
+} from '../../../services/TrainingSessionService';
+import AddMachinesFromTheList from '../add_machines/from_list/AddMachinesFromTheList';
+import { Machines, MachineSession } from '../../../datamodels';
+import { doc } from 'firebase/firestore'; // Firestore doc utility
+import TextModal from '../add_machines/modal/TextModal';
+import { useAuth } from '../../../auth';
+import { useTimer } from '../../../contexts/TimerContext';
+import { firestore } from '../../../firebase';
+import './TrainingStart.css';
 
 const StartTrainingSession: React.FC = () => {
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [sessionActive, setSessionActive] = useState(false);
-  const [timer, setTimer] = useState(0);
-  const [machineSessions, setMachineSessions] = useState<MachineSession[]>([]);
+  const { timer, isRunning, startTimer, stopTimer, resetTimer } = useTimer();
+  const [sessionId, setSessionId] = useState<string | null>(() =>
+    localStorage.getItem('sessionId')
+  );
+  const [machineSessions, setMachineSessions] = useState<MachineSession[]>(
+    () => {
+      const storedSessions = localStorage.getItem('machineSessions');
+      if (!storedSessions) return [];
+      const parsedSessions = JSON.parse(storedSessions);
+      // Restore Firestore references
+      return parsedSessions.map((session: any) => ({
+        ...session,
+        machine_ref: doc(firestore, 'machines', session.machine_ref.id), // Recreate DocumentReference
+      }));
+    }
+  );
   const [showMachinesList, setShowMachinesList] = useState(false);
   const [showStartAlert, setShowStartAlert] = useState(false);
   const [showEndAlert, setShowEndAlert] = useState(false);
@@ -48,27 +67,108 @@ const StartTrainingSession: React.FC = () => {
   const [selectedMachine, setSelectedMachine] = useState<Machines | null>(null);
   const { userId } = useAuth();
 
+  // Persist sessionId to localStorage
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (sessionActive) {
-      interval = setInterval(
-        () => setTimer((prevTimer) => prevTimer + 1),
-        1000
-      );
+    if (sessionId) {
+      localStorage.setItem('sessionId', sessionId);
+    } else {
+      localStorage.removeItem('sessionId');
     }
-    return () => interval && clearInterval(interval);
-  }, [sessionActive]);
+  }, [sessionId]);
+
+  // Persist machineSessions to localStorage
+  useEffect(() => {
+    const serializedSessions = machineSessions.map(session => ({
+      ...session,
+      machine_ref: { id: session.machine_ref.id }, // Only store the machine ID
+    }));
+    localStorage.setItem('machineSessions', JSON.stringify(serializedSessions));
+  }, [machineSessions]);
+
+  useEffect(() => {
+    // Reset UI state on mount
+    setShowMachinesList(false);
+    setShowTextModal(false);
+    setSelectedMachine(null);
+  }, []);
+
+  const handleStartTraining = () => {
+    startSession(
+      userId!,
+      setSessionId,
+      () => {},
+      () => {}
+    );
+    startTimer();
+    setShowStartAlert(false);
+  };
+
+  const handleEndTraining = () => {
+    if (!sessionId) {
+      console.error('Session ID is null. Cannot end session.');
+      return;
+    }
+    setShowEndAlert(true);
+  };
+
+  const confirmEndTraining = (shouldEnd: boolean) => {
+    if (shouldEnd) {
+      if (!sessionId) {
+        console.error('Session ID is null. Cannot end session.');
+        return;
+      }
+      endSession(sessionId, () => {}, setMachineSessions);
+      stopTimer();
+      resetTimer();
+      setSessionId(null); // Clear session ID
+      localStorage.removeItem('sessionId'); // Clear persisted session ID
+      localStorage.removeItem('machineSessions'); // Clear persisted machine sessions
+    }
+    setShowEndAlert(false);
+  };
 
   const handleMachineSelection = async (machine: Machines) => {
-    if (!sessionId) return;
+    if (!sessionId) {
+      console.error('Session ID is null. Cannot add machine.');
+      return;
+    }
+
+    // Prevent duplicate machine sessions
+    const machineAlreadyAdded = machineSessions.some(
+      session => session.machine_ref.id === machine.id
+    );
+    if (machineAlreadyAdded) {
+      console.warn(`Machine with ID ${machine.id} is already added.`);
+      return;
+    }
 
     try {
       setSelectedMachine(machine);
       setShowMachinesList(false);
-      setShowTextModal(true);
+      setShowTextModal(true); // Open modal for reps/weight input
     } catch (error) {
-      console.error("Error selecting machine:", error);
+      console.error('Error selecting machine:', error);
     }
+  };
+
+  const handleTextModalConfirm = async (reps: number, weight: number) => {
+    if (selectedMachine && sessionId) {
+      try {
+        await addMachineSession(
+          userId!,
+          sessionId,
+          selectedMachine,
+          reps,
+          weight,
+          machineSessions,
+          setMachineSessions
+        );
+        setSelectedMachine(null);
+      } catch (error) {
+        console.error('Error adding machine session:', error);
+      }
+    }
+    setShowTextModal(false);
   };
 
   const handleAddSetToSession = async (reps: number, weight: number) => {
@@ -85,7 +185,7 @@ const StartTrainingSession: React.FC = () => {
         );
         setMachineSessions(updatedSessions);
       } catch (error) {
-        console.error("Failed to add set:", error);
+        console.error('Failed to add set:', error);
       }
     }
 
@@ -105,28 +205,8 @@ const StartTrainingSession: React.FC = () => {
       );
       setMachineSessions(updatedSessions);
     } catch (error) {
-      console.error("Failed to remove set:", error);
+      console.error('Failed to remove set:', error);
     }
-  };
-
-  const handleTextModalConfirm = async (reps: number, weight: number) => {
-    if (selectedMachine && sessionId) {
-      try {
-        await addMachineSession(
-          userId!,
-          sessionId,
-          selectedMachine,
-          reps,
-          weight,
-          machineSessions,
-          setMachineSessions
-        );
-        setSelectedMachine(null);
-      } catch (error) {
-        console.error("Error adding machine session:", error);
-      }
-    }
-    setShowTextModal(false);
   };
 
   const handleQRScan = async () => {
@@ -140,39 +220,28 @@ const StartTrainingSession: React.FC = () => {
   };
 
   const handleCancelQRScan = () => {
-    setIsScanning(false); // Stop scanning process
-  };
-
-  const handleEndTraining = () => {
-    setShowEndAlert(true);
-  };
-
-  const confirmEndTraining = () => {
-    endSession(sessionId, setSessionActive, setMachineSessions);
-    setShowEndAlert(false);
+    setIsScanning(false);
   };
 
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>
-            {sessionActive
-              ? `Session Time: ${formatTime(timer)}`
-              : "Training Session"}
-          </IonTitle>
+          <IonTitle>Training Session</IonTitle>
+          {isRunning && (
+            <IonButtons slot="end">
+              <div style={{ fontWeight: 'bold' }}>{formatTime(timer)}</div>
+            </IonButtons>
+          )}
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding">
-        {!sessionActive && (
-          <IonButton
-            onClick={() => setShowStartAlert(true)}
-            disabled={sessionActive}
-          >
+        {!isRunning && (
+          <IonButton onClick={() => setShowStartAlert(true)}>
             Start Training
           </IonButton>
         )}
-        {sessionActive && (
+        {isRunning && (
           <IonButton color="danger" expand="full" onClick={handleEndTraining}>
             End Training
           </IonButton>
@@ -180,30 +249,27 @@ const StartTrainingSession: React.FC = () => {
         <IonAlert
           isOpen={showStartAlert}
           onDidDismiss={() => setShowStartAlert(false)}
-          header={"Are you ready to pump?"}
+          header={'Are you ready to pump?'}
           buttons={[
-            { text: "No", role: "cancel" },
-            {
-              text: "Yes",
-              handler: () =>
-                startSession(userId!, setSessionId, setSessionActive, setTimer),
-            },
+            { text: 'No', role: 'cancel' },
+            { text: 'Yes', handler: handleStartTraining },
           ]}
         />
         <IonAlert
           isOpen={showEndAlert}
           onDidDismiss={() => setShowEndAlert(false)}
-          header={"Are you proud of yourself?"}
+          header={'Are you proud of yourself?'}
           buttons={[
-            { text: "No", role: "cancel" },
             {
-              text: "Yes",
-              handler: confirmEndTraining,
+              text: 'No',
+              role: 'cancel',
+              handler: () => confirmEndTraining(false),
             },
+            { text: 'Yes', handler: () => confirmEndTraining(true) },
           ]}
         />
 
-        {sessionActive && (
+        {isRunning && (
           <>
             <IonButton onClick={() => setShowMachinesList(true)}>
               Add Machines from the List
@@ -242,7 +308,7 @@ const StartTrainingSession: React.FC = () => {
                   onClick={() =>
                     deleteMachineSession(
                       session.id,
-                      sessionId,
+                      sessionId!,
                       machineSessions,
                       setMachineSessions
                     )

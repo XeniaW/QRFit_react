@@ -16,10 +16,14 @@ import {
   convertFirestoreTimestampToDate,
   calculateDuration,
   deleteTrainingSession,
-} from '../utils/TrainingSessionUtils';
+} from '../../../utils/TrainingSessionUtils';
 import { useAuth } from '../../../auth';
 import { useParams, useHistory } from 'react-router-dom';
-import { Machines, TrainingSessions, MachineSession } from '../../../datamodels';
+import {
+  Machines,
+  TrainingSessions,
+  MachineSession,
+} from '../../../datamodels';
 
 interface MachineDetails {
   machine: Machines;
@@ -28,13 +32,12 @@ interface MachineDetails {
 
 const TrainingSessionDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [trainingSession, setTrainingSession] = useState<TrainingSessions | null>(null);
+  const [trainingSession, setTrainingSession] =
+    useState<TrainingSessions | null>(null);
   const [machineDetails, setMachineDetails] = useState<MachineDetails[]>([]); // Store machine and set details
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const history = useHistory();
   const { userId } = useAuth(); // Fetch the current user's ID from AuthContext
-
-
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -42,7 +45,7 @@ const TrainingSessionDetails: React.FC = () => {
       const sessionDoc = await getDoc(sessionRef);
 
       if (!userId) {
-        console.error("User is not authenticated");
+        console.error('User is not authenticated');
         return;
       }
       if (sessionDoc.exists()) {
@@ -50,29 +53,40 @@ const TrainingSessionDetails: React.FC = () => {
         setTrainingSession(sessionData);
 
         // Fetch machine_sessions and resolve machine references
-        const machineSessionPromises = sessionData.machine_sessions.map(async (machineSessionId) => {
-          const machineSessionRef = doc(firestore, 'machine_sessions', machineSessionId);
-          const machineSessionDoc = await getDoc(machineSessionRef);
+        const machineSessionPromises = sessionData.machine_sessions.map(
+          async machineSessionId => {
+            const machineSessionRef = doc(
+              firestore,
+              'machine_sessions',
+              machineSessionId
+            );
+            const machineSessionDoc = await getDoc(machineSessionRef);
 
-          if (machineSessionDoc.exists()) {
-            const machineSessionData = machineSessionDoc.data() as MachineSession;
+            if (machineSessionDoc.exists()) {
+              const machineSessionData =
+                machineSessionDoc.data() as MachineSession;
 
-            // Fetch machine details using machine_ref (DocumentReference)
-            const machineRef = machineSessionData.machine_ref as DocumentReference;
-            const machineDoc = await getDoc(machineRef);
-            if (machineDoc.exists()) {
-              return {
-                machine: { id: machineDoc.id, ...machineDoc.data() } as Machines,
-                sets: machineSessionData.sets,
-              };
+              // Fetch machine details using machine_ref (DocumentReference)
+              const machineRef =
+                machineSessionData.machine_ref as DocumentReference;
+              const machineDoc = await getDoc(machineRef);
+              if (machineDoc.exists()) {
+                return {
+                  machine: {
+                    id: machineDoc.id,
+                    ...machineDoc.data(),
+                  } as Machines,
+                  sets: machineSessionData.sets,
+                };
+              }
             }
+            return null;
           }
-          return null;
-        });
+        );
 
         // Resolve all promises and filter out any null values
         const detailedData = (await Promise.all(machineSessionPromises)).filter(
-          (data) => data !== null
+          data => data !== null
         ) as MachineDetails[];
         setMachineDetails(detailedData);
       }
@@ -83,10 +97,10 @@ const TrainingSessionDetails: React.FC = () => {
 
   const handleDelete = async () => {
     if (!userId) {
-      console.error("User is not authenticated.");
+      console.error('User is not authenticated.');
       return;
     }
-  
+
     try {
       await deleteTrainingSession(id, userId); // Pass userId as the second argument
       history.push('/my/sessions'); // Redirect back to sessions list after deletion
@@ -95,10 +109,19 @@ const TrainingSessionDetails: React.FC = () => {
     }
   };
 
-  const startDate = trainingSession ? convertFirestoreTimestampToDate(trainingSession.start_date) : null;
-  const endDate = trainingSession ? convertFirestoreTimestampToDate(trainingSession.end_date) : null;
-  const formattedStartDate = startDate ? startDate.toLocaleString() : 'No Start Date';
-  const duration = startDate && endDate ? calculateDuration(startDate, endDate) : 'Duration not available';
+  const startDate = trainingSession
+    ? convertFirestoreTimestampToDate(trainingSession.start_date)
+    : null;
+  const endDate = trainingSession
+    ? convertFirestoreTimestampToDate(trainingSession.end_date)
+    : null;
+  const formattedStartDate = startDate
+    ? startDate.toLocaleString()
+    : 'No Start Date';
+  const duration =
+    startDate && endDate
+      ? calculateDuration(startDate, endDate)
+      : 'Duration not available';
 
   return (
     <IonPage>
@@ -132,7 +155,7 @@ const TrainingSessionDetails: React.FC = () => {
                 </p>
                 {sets.length > 0 ? (
                   <ul>
-                    {sets.map((set) => (
+                    {sets.map(set => (
                       <li key={set.set_number}>
                         Set {set.set_number}: {set.reps} reps, {set.weight} kg
                       </li>

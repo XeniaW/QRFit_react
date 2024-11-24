@@ -1,6 +1,6 @@
 import { getDoc, doc } from 'firebase/firestore';
-import { firestore } from '../../../firebase';
-import { Machines } from '../../../datamodels';
+import { firestore } from '../firebase';
+import { Machines } from '../datamodels';
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
 import { Capacitor } from '@capacitor/core';
 import jsQR from 'jsqr';
@@ -45,7 +45,12 @@ const scanWithWebCamera = async (): Promise<string | null> => {
           canvas.height = video.videoHeight;
           context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-          const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+          const imageData = context.getImageData(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+          );
           const code = jsQR(imageData.data, imageData.width, imageData.height);
 
           if (code) {
@@ -60,7 +65,7 @@ const scanWithWebCamera = async (): Promise<string | null> => {
       requestAnimationFrame(scanFrame);
 
       const stopStream = (stream: MediaStream) => {
-        stream.getTracks().forEach((track) => track.stop());
+        stream.getTracks().forEach(track => track.stop());
         video.srcObject = null;
       };
 
@@ -76,7 +81,9 @@ const scanWithWebCamera = async (): Promise<string | null> => {
 };
 
 // Fetch a machine by ID from Firestore
-export const handleAddMachineById = async (machineId: string): Promise<Machines | null> => {
+export const handleAddMachineById = async (
+  machineId: string
+): Promise<Machines | null> => {
   try {
     const machineRef = doc(firestore, 'machines', machineId);
     const machineSnap = await getDoc(machineRef);

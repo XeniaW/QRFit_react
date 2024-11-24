@@ -1,4 +1,4 @@
-import { firestore } from '../../../firebase';
+import { firestore } from '../firebase';
 import { deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
 
 /**
@@ -6,7 +6,9 @@ import { deleteDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
  * @param timestamp Firestore Timestamp with seconds and nanoseconds
  * @returns JavaScript Date or null if the timestamp is invalid
  */
-export const convertFirestoreTimestampToDate = (timestamp: { seconds: number }) => {
+export const convertFirestoreTimestampToDate = (timestamp: {
+  seconds: number;
+}) => {
   return timestamp && timestamp.seconds
     ? new Date(timestamp.seconds * 1000)
     : null;
@@ -22,7 +24,9 @@ export const calculateDuration = (startDate: Date, endDate: Date) => {
   const durationMs = endDate.getTime() - startDate.getTime();
 
   const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
-  const durationMinutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+  const durationMinutes = Math.floor(
+    (durationMs % (1000 * 60 * 60)) / (1000 * 60)
+  );
   const durationSeconds = Math.floor((durationMs % (1000 * 60)) / 1000);
 
   // Pad hours, minutes, and seconds with leading zeros if they are less than 10
@@ -46,7 +50,7 @@ export const calculateDuration = (startDate: Date, endDate: Date) => {
 export const deleteTrainingSession = async (id: string, userId: string) => {
   try {
     // Step 1: Fetch the training session document
-    const sessionRef = doc(firestore, "training_sessions", id);
+    const sessionRef = doc(firestore, 'training_sessions', id);
     const sessionDoc = await getDoc(sessionRef);
 
     if (!sessionDoc.exists()) {
@@ -55,29 +59,45 @@ export const deleteTrainingSession = async (id: string, userId: string) => {
 
     const sessionData = sessionDoc.data();
     if (sessionData.user_id !== userId) {
-      console.error("Unauthorized deletion attempt");
+      console.error('Unauthorized deletion attempt');
       return;
     }
-    if (!sessionData?.machine_sessions || !Array.isArray(sessionData.machine_sessions)) {
-      throw new Error("Invalid training session data or no machine_sessions found.");
+    if (
+      !sessionData?.machine_sessions ||
+      !Array.isArray(sessionData.machine_sessions)
+    ) {
+      throw new Error(
+        'Invalid training session data or no machine_sessions found.'
+      );
     }
 
     const machineSessionIds: string[] = sessionData.machine_sessions;
 
     // Step 2: Delete each machine session
-    const deleteMachineSessionPromises = machineSessionIds.map(async (machineSessionId) => {
-      const machineSessionRef = doc(firestore, "machine_sessions", machineSessionId);
-      await deleteDoc(machineSessionRef);
-      console.log(`Deleted machine session with ID: ${machineSessionId}`);
-    });
+    const deleteMachineSessionPromises = machineSessionIds.map(
+      async machineSessionId => {
+        const machineSessionRef = doc(
+          firestore,
+          'machine_sessions',
+          machineSessionId
+        );
+        await deleteDoc(machineSessionRef);
+        console.log(`Deleted machine session with ID: ${machineSessionId}`);
+      }
+    );
 
     await Promise.all(deleteMachineSessionPromises);
 
     // Step 3: Delete the training session document
     await deleteDoc(sessionRef);
-    console.log(`Training session with ID ${id} deleted successfully along with its machine sessions for user ${userId}.`);
+    console.log(
+      `Training session with ID ${id} deleted successfully along with its machine sessions for user ${userId}.`
+    );
   } catch (error) {
-    console.error("Error deleting training session and its machine sessions:", error);
+    console.error(
+      'Error deleting training session and its machine sessions:',
+      error
+    );
     throw error; // Rethrow the error to handle in the component
   }
 };
