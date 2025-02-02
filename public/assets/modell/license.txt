@@ -1,0 +1,11 @@
+Model Information:
+* title:	Male body
+* source:	https://sketchfab.com/3d-models/male-body-5c818a5be6c84f898826d989f02932b0
+* author:	Chin Eeyang (https://sketchfab.com/chinyang1607)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Male body" (https://sketchfab.com/3d-models/male-body-5c818a5be6c84f898826d989f02932b0) by Chin Eeyang (https://sketchfab.com/chinyang1607) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
