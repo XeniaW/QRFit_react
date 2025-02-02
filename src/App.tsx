@@ -8,6 +8,7 @@ import Login from './pages/login/Login';
 import Home from './pages/home/Home';
 import AppTabs from './AppTabs';
 import GlobalTimerHeader from './components/timer/GlobalTimerHeader'; // Import global timer header
+import ModelPage from './pages/3d-modell/3DModell';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -28,6 +29,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
 
 import { TimerProvider } from './contexts/TimerContext'; // Import Timer Provider
+import { PageTitleProvider } from './contexts/usePageTitle';
 
 setupIonicReact();
 
@@ -73,9 +75,6 @@ const App: React.FC = () => {
   return (
     <IonApp>
       <TimerProvider>
-        {' '}
-        {/* Wrap entire app in TimerProvider */}
-        <GlobalTimerHeader /> {/* Display global timer in header */}
         <AuthContext.Provider
           value={{
             loggedIn: authState.loggedIn,
@@ -84,19 +83,19 @@ const App: React.FC = () => {
           }}
         >
           <IonReactRouter>
-            <Switch>
-              <Route exact path="/" component={Home} />
-              <Route exact path="/login">
-                <Login />
-              </Route>
-              <Route exact path="/registration">
-                <Registration />
-              </Route>
-              <Route path="/my">
-                <AppTabs />
-              </Route>
-              <Redirect exact path="/" to="/my/training" />
-            </Switch>
+            <PageTitleProvider>
+              {' '}
+              {/* Move PageTitleProvider inside IonReactRouter */}
+              <GlobalTimerHeader /> {/* Now correctly updates the title */}
+              <Switch>
+                <Route exact path="/" component={Home} />
+                <Route exact path="/modell" component={ModelPage} />
+                <Route exact path="/login" component={Login} />
+                <Route exact path="/registration" component={Registration} />
+                <Route path="/my" component={AppTabs} />
+                <Redirect exact path="/" to="/my/training" />
+              </Switch>
+            </PageTitleProvider>
           </IonReactRouter>
         </AuthContext.Provider>
       </TimerProvider>

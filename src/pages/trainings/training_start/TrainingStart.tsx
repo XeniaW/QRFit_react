@@ -38,8 +38,14 @@ import { useAuth } from '../../../auth';
 import { useTimer } from '../../../contexts/TimerContext';
 import { firestore } from '../../../firebase';
 import './TrainingStart.css';
+import { usePageTitle } from '../../../contexts/usePageTitle';
 
 const StartTrainingSession: React.FC = () => {
+  const { setTitle } = usePageTitle();
+
+  useEffect(() => {
+    setTitle('Start Training'); // Set title dynamically
+  }, []);
   const { timer, isRunning, startTimer, stopTimer, resetTimer } = useTimer();
   const [sessionId, setSessionId] = useState<string | null>(() =>
     localStorage.getItem('sessionId')
@@ -227,7 +233,6 @@ const StartTrainingSession: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Training Session</IonTitle>
           {isRunning && (
             <IonButtons slot="end">
               <div style={{ fontWeight: 'bold' }}>{formatTime(timer)}</div>

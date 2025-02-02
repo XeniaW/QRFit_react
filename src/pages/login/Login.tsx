@@ -12,23 +12,29 @@ import {
   IonInput,
   IonText,
   IonLoading,
-} from "@ionic/react";
-import { Redirect, useParams } from "react-router";
-import { useState } from "react";
-import "./Login.css";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../firebase";
-import { useAuth } from "../../auth";
-import { cpuUsage } from "process";
+} from '@ionic/react';
+import { Redirect, useParams } from 'react-router';
+import { useEffect, useState } from 'react';
+import './Login.css';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../firebase';
+import { useAuth } from '../../auth';
+import { cpuUsage } from 'process';
+import { usePageTitle } from '../../contexts/usePageTitle';
 
 const Login: React.FC = () => {
+  const { setTitle } = usePageTitle();
+
+  useEffect(() => {
+    setTitle('Login Page'); // Set title dynamically
+  }, []);
   const { loggedIn } = useAuth();
-  const [LoginEmail, setLoginEmail] = useState<any | null>("");
-  const [LoginPassword, setLoginPassword] = useState<any | null>("");
+  const [LoginEmail, setLoginEmail] = useState<any | null>('');
+  const [LoginPassword, setLoginPassword] = useState<any | null>('');
 
   const [status, setStatus] = useState({ loading: false, error: false });
 
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleLogin = async () => {
     try {
@@ -39,14 +45,14 @@ const Login: React.FC = () => {
         LoginPassword
       );
       setStatus({ loading: false, error: false });
-      console.log("credentials:", credential);
+      console.log('credentials:', credential);
     } catch (error) {
       if (error instanceof Error) {
         setStatus({ loading: false, error: true });
         setErrorMessage(error.message);
         console.log(error.message);
       } else {
-        console.log("Unexpected error", error);
+        console.log('Unexpected error', error);
       }
     }
   };
@@ -59,18 +65,9 @@ const Login: React.FC = () => {
   return (
     <IonPage>
       <IonContent fullscreen>
-        <IonHeader>
-          <IonToolbar>
-            <IonButtons slot="start">
-              <IonBackButton defaultHref="/" />
-            </IonButtons>
-            <IonTitle size="large">Login</IonTitle>
-          </IonToolbar>
-        </IonHeader>
-
         <IonRow>
           <IonCol className="ion-padding-top">
-            <img src="/assets/sil.png" alt={"MainImage"} />
+            <img src="/assets/sil.png" alt={'MainImage'} />
           </IonCol>
         </IonRow>
         <IonRow>
@@ -79,7 +76,7 @@ const Login: React.FC = () => {
               type="email"
               placeholder="email"
               value={LoginEmail}
-              onIonChange={(event) => setLoginEmail(event.detail.value)}
+              onIonChange={event => setLoginEmail(event.detail.value)}
             />
           </IonCol>
           <IonCol>
@@ -87,7 +84,7 @@ const Login: React.FC = () => {
               type="password"
               placeholder="password"
               value={LoginPassword}
-              onIonChange={(event) => setLoginPassword(event.detail.value)}
+              onIonChange={event => setLoginPassword(event.detail.value)}
             />
           </IonCol>
         </IonRow>
