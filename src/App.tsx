@@ -8,7 +8,8 @@ import Login from './pages/login/Login';
 import Home from './pages/home/Home';
 import AppTabs from './AppTabs';
 import GlobalTimerHeader from './components/timer/GlobalTimerHeader'; // Import global timer header
-import ModelPage from './pages/3d-modell/3DModell';
+//import ModelPage from './pages/advisor/3d-modell/3DModell';
+import ModelPage from './pages/advisor/3d-modell/ModelPage';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
