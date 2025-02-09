@@ -4,7 +4,6 @@ import {
   IonContent,
   IonHeader,
   IonPage,
-  IonTitle,
   IonToolbar,
   IonAlert,
   IonAccordionGroup,
@@ -32,7 +31,7 @@ import {
 } from '../../../services/TrainingSessionService';
 import AddMachinesFromTheList from '../add_machines/from_list/AddMachinesFromTheList';
 import { Machines, MachineSession } from '../../../datamodels';
-import { doc } from 'firebase/firestore'; // Firestore doc utility
+import { doc, getDoc } from 'firebase/firestore'; // Firestore doc utility
 import TextModal from '../add_machines/modal/TextModal';
 import { useAuth } from '../../../auth';
 import { useTimer } from '../../../contexts/TimerContext';
@@ -65,6 +64,9 @@ const StartTrainingSession: React.FC = () => {
   const [showMachinesList, setShowMachinesList] = useState(false);
   const [showStartAlert, setShowStartAlert] = useState(false);
   const [showEndAlert, setShowEndAlert] = useState(false);
+  const [machineNames, setMachineNames] = useState<{ [key: string]: string }>(
+    {}
+  );
   const [isScanning, setIsScanning] = useState(false);
   const [showTextModal, setShowTextModal] = useState(false);
   const [selectedSessionIndex, setSelectedSessionIndex] = useState<
@@ -156,6 +158,29 @@ const StartTrainingSession: React.FC = () => {
       console.error('Error selecting machine:', error);
     }
   };
+
+  useEffect(() => {
+    const fetchMachineNames = async () => {
+      const newMachineNames: { [key: string]: string } = {};
+      for (const session of machineSessions) {
+        if (!machineNames[session.machine_ref.id]) {
+          try {
+            const machineDoc = await getDoc(session.machine_ref);
+            if (machineDoc.exists()) {
+              newMachineNames[session.machine_ref.id] = machineDoc.data().title;
+            }
+          } catch (error) {
+            console.error('Error fetching machine name:', error);
+          }
+        }
+      }
+      setMachineNames(prev => ({ ...prev, ...newMachineNames }));
+    };
+
+    if (machineSessions.length > 0) {
+      fetchMachineNames();
+    }
+  }, [machineSessions]);
 
   const handleTextModalConfirm = async (reps: number, weight: number) => {
     if (selectedMachine && sessionId) {
@@ -305,7 +330,8 @@ const StartTrainingSession: React.FC = () => {
             <IonAccordion key={session.id} value={session.id}>
               <IonItem slot="header" color="light">
                 <IonLabel>
-                  <strong>Machine:</strong> {session.machine_ref.id}
+                  <strong>Machine:</strong>{' '}
+                  {machineNames[session.machine_ref.id] || 'Loading...'}
                 </IonLabel>
                 <IonIcon
                   icon={trash}

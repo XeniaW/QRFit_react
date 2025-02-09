@@ -1,11 +1,4 @@
-import {
-  getDoc,
-  doc,
-  collection,
-  where,
-  getDocs,
-  query,
-} from 'firebase/firestore';
+import { collection, where, getDocs, query } from 'firebase/firestore';
 import { firestore } from '../firebase';
 import { Machines } from '../datamodels';
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
