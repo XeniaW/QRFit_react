@@ -1,4 +1,11 @@
-import { getDoc, doc } from 'firebase/firestore';
+import {
+  getDoc,
+  doc,
+  collection,
+  where,
+  getDocs,
+  query,
+} from 'firebase/firestore';
 import { firestore } from '../firebase';
 import { Machines } from '../datamodels';
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
@@ -82,19 +89,22 @@ const scanWithWebCamera = async (): Promise<string | null> => {
 
 // Fetch a machine by ID from Firestore
 export const handleAddMachineById = async (
-  machineId: string
+  scannedQRCode: string
 ): Promise<Machines | null> => {
   try {
-    const machineRef = doc(firestore, 'machines', machineId);
-    const machineSnap = await getDoc(machineRef);
-    if (machineSnap.exists()) {
-      return { id: machineId, ...machineSnap.data() } as Machines;
+    const machinesRef = collection(firestore, 'machines');
+    const q = query(machinesRef, where('qrcode', '==', scannedQRCode));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      const machineDoc = querySnapshot.docs[0]; // Get the first matching document
+      return { id: machineDoc.id, ...machineDoc.data() } as Machines;
     } else {
-      console.error('No such machine!');
+      console.error('No machine found for this QR code!');
       return null;
     }
   } catch (e) {
-    console.error('Error fetching machine:', e);
+    console.error('Error fetching machine by QR code:', e);
     return null;
   }
 };
