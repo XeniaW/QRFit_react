@@ -27,6 +27,7 @@ import {
 
 interface MachineDetails {
   machine: Machines;
+  exerciseName: string | null; // <--- added
   sets: MachineSession['sets'];
 }
 
@@ -34,25 +35,27 @@ const TrainingSessionDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [trainingSession, setTrainingSession] =
     useState<TrainingSessions | null>(null);
-  const [machineDetails, setMachineDetails] = useState<MachineDetails[]>([]); // Store machine and set details
+  const [machineDetails, setMachineDetails] = useState<MachineDetails[]>([]);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const history = useHistory();
-  const { userId } = useAuth(); // Fetch the current user's ID from AuthContext
+  const { userId } = useAuth();
 
   useEffect(() => {
     const fetchSession = async () => {
-      const sessionRef = doc(firestore, 'training_sessions', id);
-      const sessionDoc = await getDoc(sessionRef);
-
       if (!userId) {
         console.error('User is not authenticated');
         return;
       }
+
+      // 1) Fetch the training session
+      const sessionRef = doc(firestore, 'training_sessions', id);
+      const sessionDoc = await getDoc(sessionRef);
+
       if (sessionDoc.exists()) {
         const sessionData = sessionDoc.data() as TrainingSessions;
         setTrainingSession(sessionData);
 
-        // Fetch machine_sessions and resolve machine references
+        // 2) For each machine session ID, fetch the machine_session doc
         const machineSessionPromises = sessionData.machine_sessions.map(
           async machineSessionId => {
             const machineSessionRef = doc(
@@ -66,16 +69,19 @@ const TrainingSessionDetails: React.FC = () => {
               const machineSessionData =
                 machineSessionDoc.data() as MachineSession;
 
-              // Fetch machine details using machine_ref (DocumentReference)
+              // 2a) Fetch the machine itself
               const machineRef =
                 machineSessionData.machine_ref as DocumentReference;
               const machineDoc = await getDoc(machineRef);
+
               if (machineDoc.exists()) {
                 return {
                   machine: {
                     id: machineDoc.id,
                     ...machineDoc.data(),
                   } as Machines,
+                  // read from the machine session doc
+                  exerciseName: machineSessionData.exercise_name || null,
                   sets: machineSessionData.sets,
                 };
               }
@@ -84,17 +90,19 @@ const TrainingSessionDetails: React.FC = () => {
           }
         );
 
-        // Resolve all promises and filter out any null values
+        // 3) Resolve all machine_session fetch promises
         const detailedData = (await Promise.all(machineSessionPromises)).filter(
           data => data !== null
         ) as MachineDetails[];
+
         setMachineDetails(detailedData);
       }
     };
 
     fetchSession();
-  }, [id]);
+  }, [id, userId]);
 
+  // Delete session
   const handleDelete = async () => {
     if (!userId) {
       console.error('User is not authenticated.');
@@ -102,13 +110,14 @@ const TrainingSessionDetails: React.FC = () => {
     }
 
     try {
-      await deleteTrainingSession(id, userId); // Pass userId as the second argument
-      history.push('/my/sessions'); // Redirect back to sessions list after deletion
+      await deleteTrainingSession(id, userId);
+      history.push('/my/sessions');
     } catch (error) {
       console.error('Error deleting document:', error);
     }
   };
 
+  // Calculate date & duration
   const startDate = trainingSession
     ? convertFirestoreTimestampToDate(trainingSession.start_date)
     : null;
@@ -133,6 +142,7 @@ const TrainingSessionDetails: React.FC = () => {
           <IonTitle>Training Session Details</IonTitle>
         </IonToolbar>
       </IonHeader>
+
       <IonContent fullscreen>
         <h2>Session ID: {id}</h2>
         <p>
@@ -148,24 +158,36 @@ const TrainingSessionDetails: React.FC = () => {
         </p>
         {machineDetails.length > 0 ? (
           <ul>
-            {machineDetails.map(({ machine, sets }) => (
-              <li key={machine.id}>
-                <p>
-                  <strong>{machine.title || 'Unnamed Machine'}</strong>
-                </p>
-                {sets.length > 0 ? (
-                  <ul>
-                    {sets.map(set => (
-                      <li key={set.set_number}>
-                        Set {set.set_number}: {set.reps} reps, {set.weight} kg
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>No sets recorded.</p>
-                )}
-              </li>
-            ))}
+            {machineDetails.map(({ machine, sets, exerciseName }) => {
+              // If exerciseName is the same as machine.title, or if exerciseName is null,
+              // we just show the machine title
+              const showExerciseName =
+                exerciseName && exerciseName !== machine.title
+                  ? ` - ${exerciseName}`
+                  : '';
+
+              return (
+                <li key={machine.id}>
+                  <p>
+                    <strong>
+                      {machine.title || 'Unnamed Machine'}
+                      {showExerciseName}
+                    </strong>
+                  </p>
+                  {sets.length > 0 ? (
+                    <ul>
+                      {sets.map(set => (
+                        <li key={set.set_number}>
+                          Set {set.set_number}: {set.reps} reps, {set.weight} kg
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>No sets recorded.</p>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <p>No machines added for this session.</p>

@@ -3,8 +3,14 @@ import { DocumentReference, Timestamp } from 'firebase/firestore';
 export interface Machines {
   id: string;
   title: string;
-  muscles: String[];
   qrcode: string;
+  image?: string; // Optional image field
+  exercises: Exercise[]; // Array of exercises
+}
+
+export interface Exercise {
+  name: string;
+  muscles: string[]; // Array of muscles targeted
 }
 
 export interface SetDetail {
@@ -17,6 +23,7 @@ export interface MachineSession {
   id: string; // ID of the machine session document
   training_session_id: string; // ID of the parent training session
   machine_ref: DocumentReference; // Reference to the machine
+  exercise_name?: string; // Name of the selected exercise
   date_used: Timestamp; // Timestamp of when the machine was used
   sets: SetDetail[]; // Array of sets for this machine session
   user_id: string; // ID of the user who owns this session

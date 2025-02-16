@@ -70,6 +70,7 @@ export const addMachineSession = async (
   userId: string,
   sessionId: string,
   machine: Machines,
+  exerciseName: string,
   reps: number,
   weight: number,
   machineSessions: MachineSession[],
@@ -86,7 +87,9 @@ export const addMachineSession = async (
   }
 
   const existingSessionIndex = machineSessions.findIndex(
-    session => session.machine_ref.id === machine.id
+    session =>
+      session.machine_ref.id === machine.id &&
+      session.exercise_name === exerciseName
   );
 
   const newSet = {
@@ -125,6 +128,7 @@ export const addMachineSession = async (
     const machineSession = {
       training_session_id: sessionId,
       machine_ref: doc(firestore, 'machines', machine.id),
+      exercise_name: exerciseName,
       date_used: Timestamp.now(),
       sets: [newSet],
       user_id: userId,
