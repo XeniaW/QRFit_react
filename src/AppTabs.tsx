@@ -6,7 +6,12 @@ import {
   IonTabButton,
   IonTabs,
 } from '@ionic/react';
-import { barbell as barbellIcon, settings as settingsIcon, statsChart as statsChartIcon, body as bodyIcon  } from 'ionicons/icons';
+import {
+  barbell as barbellIcon,
+  settings as settingsIcon,
+  statsChart as statsChartIcon,
+  body as bodyIcon,
+} from 'ionicons/icons';
 import React from 'react';
 import { Redirect, Route } from 'react-router-dom';
 import { useAuth } from './auth';
@@ -14,7 +19,7 @@ import Training from './pages/UserView/training/Training';
 import Statistics from './pages/UserView/statistics/Statistics';
 import Settings from './pages/UserView/settings/Settings';
 import Advisor from './pages/UserView/advisor/Advisor';
-import MachineList from './pages/machines/Machines';
+import MachineList from './pages/machines/MachineList';
 import MachineItem from './pages/machines/machine_item/MachineItem';
 import StartTrainingSession from './pages/trainings/training_start/TrainingStart';
 import TrainingSessions from './pages/trainings/training_sessions/TrainingSessions';
@@ -47,7 +52,7 @@ const AppTabs: React.FC = () => {
           <TrainingSessions />
         </Route>
         <Route exact path="/my/sessions/:id">
-          <TrainingSessionDetails/>
+          <TrainingSessionDetails />
         </Route>
         <Route exact path="/my/settings">
           <Settings />
