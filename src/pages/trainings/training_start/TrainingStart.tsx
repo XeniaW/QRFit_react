@@ -23,6 +23,7 @@ import {
   endSession,
   addMachineSession,
   deleteMachineSession,
+  cancelSession,
 } from '../../../services/TrainingSessionService';
 import {
   startQRScan,
@@ -114,6 +115,34 @@ const StartTrainingSession: React.FC = () => {
   }, []);
 
   // ---------- Start / End Training Logic ----------
+  // Updated: Only fetch machine names when machineSessions change.
+  useEffect(() => {
+    const fetchMachineNames = async () => {
+      const newMachineNames: { [key: string]: string } = {};
+      for (const session of machineSessions) {
+        const machineId = session.machine_ref.id;
+        // Only fetch if we don't already have the name
+        if (!machineNames[machineId]) {
+          try {
+            const machineDoc = await getDoc(session.machine_ref);
+            if (machineDoc.exists()) {
+              newMachineNames[machineId] = machineDoc.data().title;
+            }
+          } catch (error) {
+            console.error('Error fetching machine name:', error);
+          }
+        }
+      }
+      if (Object.keys(newMachineNames).length > 0) {
+        setMachineNames(prev => ({ ...prev, ...newMachineNames }));
+      }
+    };
+
+    if (machineSessions.length > 0) {
+      fetchMachineNames();
+    }
+  }, [machineSessions]);
+
   const handleStartTraining = () => {
     startSession(
       userId!,
@@ -133,16 +162,32 @@ const StartTrainingSession: React.FC = () => {
     setShowEndAlert(true);
   };
 
-  const confirmEndTraining = (shouldEnd: boolean) => {
-    if (shouldEnd) {
-      if (!sessionId) {
-        console.error('Session ID is null. Cannot end session.');
-        return;
-      }
+  const confirmEndTraining = (shouldEnd: boolean, isCancel = false) => {
+    if (!sessionId) {
+      console.error('Session ID is null. Cannot end or cancel session.');
+      setShowEndAlert(false);
+      return;
+    }
+    if (isCancel) {
+      cancelSession(
+        sessionId,
+        () => {
+          stopTimer();
+          resetTimer();
+          setSessionId(null);
+          setMachineSessions([]); // Clear the machine sessions from local state
+          localStorage.removeItem('sessionId');
+          localStorage.removeItem('machineSessions');
+          console.log(`Session ${sessionId} canceled.`);
+        },
+        err => console.error('Cancel session error:', err)
+      );
+    } else if (shouldEnd) {
       endSession(sessionId, () => {}, setMachineSessions);
       stopTimer();
       resetTimer();
       setSessionId(null);
+      setMachineSessions([]); // Clear local machine sessions for a normal end
       localStorage.removeItem('sessionId');
       localStorage.removeItem('machineSessions');
     }
@@ -155,7 +200,6 @@ const StartTrainingSession: React.FC = () => {
       console.error('Session ID is null. Cannot add machine.');
       return;
     }
-
     try {
       // If machine.exercises.length === 1, skip exercise modal
       if (machine.exercises && machine.exercises.length === 1) {
@@ -181,30 +225,6 @@ const StartTrainingSession: React.FC = () => {
     setShowExerciseModal(false); // close exercise modal
     setShowTextModal(true); // open reps/weight modal
   };
-
-  // ---------- Fetch Machine Names ----------
-  useEffect(() => {
-    const fetchMachineNames = async () => {
-      const newMachineNames: { [key: string]: string } = {};
-      for (const session of machineSessions) {
-        if (!machineNames[session.machine_ref.id]) {
-          try {
-            const machineDoc = await getDoc(session.machine_ref);
-            if (machineDoc.exists()) {
-              newMachineNames[session.machine_ref.id] = machineDoc.data().title;
-            }
-          } catch (error) {
-            console.error('Error fetching machine name:', error);
-          }
-        }
-      }
-      setMachineNames(prev => ({ ...prev, ...newMachineNames }));
-    };
-
-    if (machineSessions.length > 0) {
-      fetchMachineNames();
-    }
-  }, [machineSessions, machineNames]);
 
   // ---------- Modals for Adding Sets ----------
   const handleTextModalConfirm = async (reps: number, weight: number) => {

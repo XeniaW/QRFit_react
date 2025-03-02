@@ -7,6 +7,10 @@ import {
   deleteDoc,
   arrayUnion,
   Timestamp,
+  getDocs,
+  query,
+  where,
+  writeBatch,
 } from 'firebase/firestore';
 import { Machines, MachineSession } from '../datamodels';
 
@@ -193,5 +197,50 @@ export const deleteMachineSession = async (
     console.log(`Machine session with ID ${uniqueId} deleted successfully.`);
   } catch (error) {
     console.error('Error removing machine session:', error);
+  }
+};
+
+/**
+ * CANCELS (deletes) the training session doc from 'training_sessions'
+ * plus any associated machine_sessions where training_session_id == sessionId.
+ */
+export const cancelSession = async (
+  sessionId: string,
+  onSuccess: () => void,
+  onError?: (err: any) => void
+) => {
+  try {
+    // Create a batch for multiple deletions at once
+    const batch = writeBatch(firestore);
+
+    // 1. Delete the training session doc from 'training_sessions'
+    const sessionRef = doc(firestore, 'training_sessions', sessionId);
+    batch.delete(sessionRef);
+
+    // 2. Delete all machine sessions with matching training_session_id
+    const machineSessionsRef = collection(firestore, 'machine_sessions');
+    const q = query(
+      machineSessionsRef,
+      where('training_session_id', '==', sessionId)
+    );
+    const querySnapshot = await getDocs(q);
+
+    querySnapshot.forEach(machineDoc => {
+      batch.delete(machineDoc.ref);
+    });
+
+    // Commit the batch
+    await batch.commit();
+
+    onSuccess();
+    console.log(
+      `Cancelled training session (and any machine sessions) for ID ${sessionId}.`
+    );
+  } catch (error) {
+    if (onError) {
+      onError(error);
+    } else {
+      console.error('Error canceling session:', error);
+    }
   }
 };

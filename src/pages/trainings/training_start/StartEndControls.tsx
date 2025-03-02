@@ -9,7 +9,7 @@ interface StartEndControlsProps {
   setShowEndAlert: React.Dispatch<React.SetStateAction<boolean>>;
   handleStartTraining: () => void;
   handleEndTraining: () => void;
-  confirmEndTraining: (shouldEnd: boolean) => void;
+  confirmEndTraining: (shouldEnd: boolean, isCancel?: boolean) => void;
 }
 
 const StartEndControls: React.FC<StartEndControlsProps> = ({
@@ -50,14 +50,21 @@ const StartEndControls: React.FC<StartEndControlsProps> = ({
       <IonAlert
         isOpen={showEndAlert}
         onDidDismiss={() => setShowEndAlert(false)}
-        header={'Are you proud of yourself?'}
+        header={'What do you want to do?'}
         buttons={[
           {
-            text: 'No',
+            text: 'Continue Training',
             role: 'cancel',
-            handler: () => confirmEndTraining(false),
+            handler: () => confirmEndTraining(false, false),
           },
-          { text: 'Yes', handler: () => confirmEndTraining(true) },
+          {
+            text: 'Save Training',
+            handler: () => confirmEndTraining(true, false),
+          },
+          {
+            text: 'Cancel Session',
+            handler: () => confirmEndTraining(false, true),
+          },
         ]}
       />
     </>
