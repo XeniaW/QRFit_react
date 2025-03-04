@@ -1,11 +1,10 @@
 import {
   IonContent,
-  IonHeader,
-  IonPage,
-  IonTitle,
-  IonToolbar,
   IonList,
   IonItem,
+  IonSelect,
+  IonSelectOption,
+  IonLabel,
 } from '@ionic/react';
 import { firestore } from '../../../../firebase';
 import { useEffect, useState } from 'react';
@@ -20,20 +19,70 @@ const AddMachinesFromTheList: React.FC<AddMachinesFromTheListProps> = ({
   onSelectMachine,
 }) => {
   const [machines, setMachines] = useState<any[]>([]);
+  const [selectedMuscle, setSelectedMuscle] = useState<string>('');
+
   const machineRef = collection(firestore, 'machines');
 
   useEffect(() => {
+    let isMounted = true;
+
     const getMachines = async () => {
       const data = await getDocs(machineRef);
-      setMachines(data.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      if (isMounted) {
+        setMachines(data.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      }
     };
+
     getMachines();
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [machineRef]);
+
+  // Build a list of unique muscles
+  const muscleSet = new Set<string>();
+  machines.forEach(machine => {
+    if (machine.exercises && machine.exercises.length) {
+      machine.exercises.forEach((exercise: any) => {
+        if (exercise.muscles && exercise.muscles.length) {
+          exercise.muscles.forEach((muscle: string) => muscleSet.add(muscle));
+        }
+      });
+    }
+  });
+  const muscleOptions = Array.from(muscleSet);
+
+  // Filter machines by the selected muscle
+  const filteredMachines = selectedMuscle
+    ? machines.filter(machine =>
+        machine.exercises?.some((exercise: any) =>
+          exercise.muscles.includes(selectedMuscle)
+        )
+      )
+    : machines;
 
   return (
     <IonContent>
+      {/* Muscle Filter */}
+      <IonItem>
+        <IonLabel>Filter by Muscle</IonLabel>
+        <IonSelect
+          value={selectedMuscle}
+          placeholder="Select a muscle"
+          onIonChange={e => setSelectedMuscle(e.detail.value)}
+        >
+          <IonSelectOption value="">All</IonSelectOption>
+          {muscleOptions.map(muscle => (
+            <IonSelectOption key={muscle} value={muscle}>
+              {muscle}
+            </IonSelectOption>
+          ))}
+        </IonSelect>
+      </IonItem>
+
       <IonList>
-        {machines.map(machine => (
+        {filteredMachines.map(machine => (
           <IonItem
             button
             key={machine.id}
