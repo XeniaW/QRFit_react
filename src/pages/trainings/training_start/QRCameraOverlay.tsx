@@ -14,6 +14,8 @@ const QRCameraOverlay: React.FC<QRCameraOverlayProps> = ({
 
   return (
     <div className="camera-overlay">
+      {/* Container for the video preview */}
+      <div id="camera-preview" style={{ width: '100%', height: 'auto' }}></div>
       <p>Scanning...</p>
       <IonButton
         className="cancel-button"

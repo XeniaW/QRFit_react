@@ -32,14 +32,45 @@ const scanWithWebCamera = async (): Promise<string | null> => {
         video: { facingMode: { ideal: 'environment' } },
       });
 
+      // Create a video element and attach the stream.
       const video = document.createElement('video');
       video.srcObject = stream;
+      video.setAttribute('playsinline', 'true');
+      video.style.width = '100%';
+      video.style.height = 'auto';
+
+      // Append the video element into the preview container
+      const previewContainer = document.getElementById('camera-preview');
+      if (previewContainer) {
+        // Clear any previous content
+        previewContainer.innerHTML = '';
+        previewContainer.appendChild(video);
+      } else {
+        // If no container exists, append to body (or adjust as needed)
+        document.body.appendChild(video);
+      }
+
       await video.play();
 
+      // Create a hidden canvas for processing video frames.
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
+      let scanning = true;
+
+      // Function to stop the stream and remove the video preview.
+      const stopStream = () => {
+        scanning = false;
+        stream.getTracks().forEach(track => track.stop());
+        video.srcObject = null;
+        if (previewContainer) {
+          previewContainer.innerHTML = '';
+        } else {
+          video.remove();
+        }
+      };
 
       const scanFrame = () => {
+        if (!scanning) return;
         if (context && video.videoWidth > 0 && video.videoHeight > 0) {
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
@@ -54,7 +85,7 @@ const scanWithWebCamera = async (): Promise<string | null> => {
           const code = jsQR(imageData.data, imageData.width, imageData.height);
 
           if (code) {
-            stopStream(stream);
+            stopStream();
             resolve(code.data);
             return;
           }
@@ -64,14 +95,12 @@ const scanWithWebCamera = async (): Promise<string | null> => {
 
       requestAnimationFrame(scanFrame);
 
-      const stopStream = (stream: MediaStream) => {
-        stream.getTracks().forEach(track => track.stop());
-        video.srcObject = null;
-      };
-
+      // Stop scanning after 15 seconds.
       setTimeout(() => {
-        stopStream(stream);
-        resolve(null);
+        if (scanning) {
+          stopStream();
+          resolve(null);
+        }
       }, 15000);
     } catch (error) {
       console.error('Web QR Scan failed:', error);
