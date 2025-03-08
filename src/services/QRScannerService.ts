@@ -3,7 +3,7 @@ import { firestore } from '../firebase';
 import { Machines } from '../datamodels';
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
 import { Capacitor } from '@capacitor/core';
-import jsQR from 'jsqr';
+import jsQR from 'jsqr-es6';
 
 export const startQRScan = async (): Promise<string | null> => {
   if (Capacitor.isNativePlatform()) {
@@ -54,7 +54,7 @@ const scanWithWebCamera = async (): Promise<string | null> => {
 
       // Create a hidden canvas for processing video frames.
       const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
+      const context = canvas.getContext('2d', { willReadFrequently: true });
       let scanning = true;
 
       // Function to stop the stream and remove the video preview.
