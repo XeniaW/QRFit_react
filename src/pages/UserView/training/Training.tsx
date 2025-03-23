@@ -53,7 +53,7 @@ const Training: React.FC = () => {
         <IonRow>
           <IonCol>
             <IonButton expand="full" color="light" routerLink="/my/sessions">
-              My Trainings
+              My Training Sessions
             </IonButton>
           </IonCol>
         </IonRow>
