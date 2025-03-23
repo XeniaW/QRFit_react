@@ -36,3 +36,15 @@ export interface TrainingSessions {
   machine_sessions: string[]; // Array of references to machines
   user_id: string; // ID of the user who owns this session
 }
+
+export interface Routine {
+  id?: string;
+  user_id: string;
+  name: string;
+  created_at?: Timestamp;
+  machineSessions: {
+    machine_ref: string;
+    exercise_name?: string;
+    sets: SetDetail[];
+  }[];
+}

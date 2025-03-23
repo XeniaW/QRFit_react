@@ -29,6 +29,7 @@ import {
   startQRScan,
   handleAddMachineById,
 } from '../../../services/QRScannerService';
+import { saveRoutine } from '../../../services/RoutineService';
 import {
   addSet,
   removeSet,
@@ -114,14 +115,12 @@ const StartTrainingSession: React.FC = () => {
     setSelectedMachine(null);
   }, []);
 
-  // ---------- Start / End Training Logic ----------
-  // Updated: Only fetch machine names when machineSessions change.
+  // ---------- Fetch Machine Names when machineSessions change ----------
   useEffect(() => {
     const fetchMachineNames = async () => {
       const newMachineNames: { [key: string]: string } = {};
       for (const session of machineSessions) {
         const machineId = session.machine_ref.id;
-        // Only fetch if we don't already have the name
         if (!machineNames[machineId]) {
           try {
             const machineDoc = await getDoc(session.machine_ref);
@@ -141,8 +140,9 @@ const StartTrainingSession: React.FC = () => {
     if (machineSessions.length > 0) {
       fetchMachineNames();
     }
-  }, [machineSessions]);
+  }, [machineSessions, machineNames]);
 
+  // ---------- Start / End Training Logic ----------
   const handleStartTraining = () => {
     startSession(
       userId!,
@@ -154,6 +154,7 @@ const StartTrainingSession: React.FC = () => {
     setShowStartAlert(false);
   };
 
+  // This is called by the IonAlert in StartEndControls
   const handleEndTraining = () => {
     if (!sessionId) {
       console.error('Session ID is null. Cannot end session.');
@@ -162,20 +163,27 @@ const StartTrainingSession: React.FC = () => {
     setShowEndAlert(true);
   };
 
-  const confirmEndTraining = (shouldEnd: boolean, isCancel = false) => {
+  // Updated confirmEndTraining to accept routineName
+  const confirmEndTraining = (
+    shouldEnd: boolean,
+    isCancel = false,
+    routineName?: string
+  ) => {
     if (!sessionId) {
       console.error('Session ID is null. Cannot end or cancel session.');
       setShowEndAlert(false);
       return;
     }
+
     if (isCancel) {
+      // user selected "Cancel Session"
       cancelSession(
         sessionId,
         () => {
           stopTimer();
           resetTimer();
           setSessionId(null);
-          setMachineSessions([]); // Clear the machine sessions from local state
+          setMachineSessions([]);
           localStorage.removeItem('sessionId');
           localStorage.removeItem('machineSessions');
           console.log(`Session ${sessionId} canceled.`);
@@ -183,14 +191,24 @@ const StartTrainingSession: React.FC = () => {
         err => console.error('Cancel session error:', err)
       );
     } else if (shouldEnd) {
+      // If the user typed a routine name, save it first
+      if (routineName && routineName.trim().length > 0) {
+        saveRoutine(userId!, routineName, machineSessions)
+          .then(() => {
+            console.log(`Routine '${routineName}' saved!`);
+          })
+          .catch(err => console.error('Error saving routine:', err));
+      }
+      // Then finalize the session
       endSession(sessionId, () => {}, setMachineSessions);
       stopTimer();
       resetTimer();
       setSessionId(null);
-      setMachineSessions([]); // Clear local machine sessions for a normal end
+      setMachineSessions([]);
       localStorage.removeItem('sessionId');
       localStorage.removeItem('machineSessions');
     }
+
     setShowEndAlert(false);
   };
 
@@ -212,8 +230,6 @@ const StartTrainingSession: React.FC = () => {
         setSelectedMachine(machine);
         setShowExerciseModal(true);
       }
-
-      // Remove the old 'prevent duplicates' logic so we can add multiple times
       setShowMachinesList(false);
     } catch (error) {
       console.error('Error selecting machine:', error);
@@ -222,8 +238,8 @@ const StartTrainingSession: React.FC = () => {
 
   const handleExerciseSelection = (exerciseName: string) => {
     setSelectedExercise(exerciseName);
-    setShowExerciseModal(false); // close exercise modal
-    setShowTextModal(true); // open reps/weight modal
+    setShowExerciseModal(false);
+    setShowTextModal(true);
   };
 
   // ---------- Modals for Adding Sets ----------

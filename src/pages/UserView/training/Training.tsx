@@ -41,7 +41,11 @@ const Training: React.FC = () => {
         {/* Buttons */}
         <IonRow>
           <IonCol>
-            <IonButton expand="full" color="light" routerLink="/my/trainingstart">
+            <IonButton
+              expand="full"
+              color="light"
+              routerLink="/my/trainingstart"
+            >
               Start Training
             </IonButton>
           </IonCol>
@@ -49,7 +53,14 @@ const Training: React.FC = () => {
         <IonRow>
           <IonCol>
             <IonButton expand="full" color="light" routerLink="/my/sessions">
-              View All Trainings
+              My Trainings
+            </IonButton>
+          </IonCol>
+        </IonRow>
+        <IonRow>
+          <IonCol>
+            <IonButton expand="full" color="light" routerLink="/my/routines">
+              My Routines
             </IonButton>
           </IonCol>
         </IonRow>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { IonButton, IonAlert } from '@ionic/react';
 
 interface StartEndControlsProps {
@@ -9,7 +9,12 @@ interface StartEndControlsProps {
   setShowEndAlert: React.Dispatch<React.SetStateAction<boolean>>;
   handleStartTraining: () => void;
   handleEndTraining: () => void;
-  confirmEndTraining: (shouldEnd: boolean, isCancel?: boolean) => void;
+  // NOTE: Added optional `routineName` param so the parent can save the routine
+  confirmEndTraining: (
+    shouldEnd: boolean,
+    isCancel?: boolean,
+    routineName?: string
+  ) => void;
 }
 
 const StartEndControls: React.FC<StartEndControlsProps> = ({
@@ -22,6 +27,9 @@ const StartEndControls: React.FC<StartEndControlsProps> = ({
   handleEndTraining,
   confirmEndTraining,
 }) => {
+  // Second alert for naming the routine
+  const [showRoutineNameAlert, setShowRoutineNameAlert] = useState(false);
+
   return (
     <>
       {!isRunning && (
@@ -64,6 +72,43 @@ const StartEndControls: React.FC<StartEndControlsProps> = ({
           {
             text: 'Cancel Session',
             handler: () => confirmEndTraining(false, true),
+          },
+          {
+            text: 'Save as Routine',
+            handler: () => {
+              // close the end-session alert, open the routine name alert
+              setShowEndAlert(false);
+              setShowRoutineNameAlert(true);
+            },
+          },
+        ]}
+      />
+
+      {/* Alert: Name the Routine */}
+      <IonAlert
+        isOpen={showRoutineNameAlert}
+        onDidDismiss={() => setShowRoutineNameAlert(false)}
+        header="Name your routine"
+        inputs={[
+          {
+            name: 'routineName',
+            type: 'text',
+            placeholder: 'e.g. My Leg Day',
+          },
+        ]}
+        buttons={[
+          {
+            text: 'Cancel',
+            role: 'cancel',
+          },
+          {
+            text: 'Save',
+            handler: data => {
+              // Pass the chosen name up to the parent so it can finalize & store the routine
+              console.log('User typed routine name:', data.routineName);
+              confirmEndTraining(true, false, data.routineName);
+              setShowRoutineNameAlert(false);
+            },
           },
         ]}
       />

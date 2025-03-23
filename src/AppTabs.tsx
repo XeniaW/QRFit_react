@@ -24,6 +24,8 @@ import MachineItem from './pages/machines/machine_item/MachineItem';
 import StartTrainingSession from './pages/trainings/training_start/TrainingStart';
 import TrainingSessions from './pages/trainings/training_sessions/TrainingSessions';
 import TrainingSessionDetails from './pages/trainings/training_session/TrainingSessionDetails';
+import RoutineList from './pages/routines/routine_list/RoutinesList';
+import RoutineDetails from './pages/routines/routine_details/RoutineDetails';
 
 const AppTabs: React.FC = () => {
   const { loggedIn } = useAuth();
@@ -53,6 +55,12 @@ const AppTabs: React.FC = () => {
         </Route>
         <Route exact path="/my/sessions/:id">
           <TrainingSessionDetails />
+        </Route>
+        <Route exact path="/my/routines/">
+          <RoutineList />
+        </Route>
+        <Route exact path="/my/routines/:id">
+          <RoutineDetails />
         </Route>
         <Route exact path="/my/settings">
           <Settings />
