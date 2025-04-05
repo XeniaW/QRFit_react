@@ -30,11 +30,7 @@ import {
   handleAddMachineById,
 } from '../../../services/QRScannerService';
 import { saveRoutine } from '../../../services/RoutineService';
-import {
-  addSet,
-  removeSet,
-  formatTime,
-} from '../../../utils/TrainingSessionUtils';
+import { addSet, removeSet } from '../../../utils/TrainingSessionUtils';
 
 import AddMachinesFromTheList from '../add_machines/from_list/AddMachinesFromTheList';
 import ExerciseModal from '../add_machines/modal/ExerciseModal';
@@ -318,13 +314,7 @@ const StartTrainingSession: React.FC = () => {
   return (
     <IonPage>
       <IonHeader>
-        <IonToolbar>
-          {isRunning && (
-            <IonButtons slot="end">
-              <div style={{ fontWeight: 'bold' }}>{formatTime(timer)}</div>
-            </IonButtons>
-          )}
-        </IonToolbar>
+        <IonToolbar></IonToolbar>
       </IonHeader>
 
       <IonContent className="ion-padding">

@@ -103,18 +103,6 @@ export const deleteTrainingSession = async (id: string, userId: string) => {
 };
 
 /**
- * Utility function to format time in HH:MM:SS format.
- * @param seconds - Total seconds to format.
- * @returns Formatted time string.
- */
-export const formatTime = (seconds: number): string => {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-};
-
-/**
  * Adds a new set to the specified session in the machineSessions array
  * and updates the Firestore database.
  * @param {Array} machineSessions - The array of machine sessions.
