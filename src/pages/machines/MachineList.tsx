@@ -18,11 +18,17 @@ import { firestore } from '../../firebase';
 import { useEffect, useState } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 
+import { useLocation } from 'react-router-dom';
+
 const MachineList: React.FC = () => {
   const [machines, setMachines] = useState<any[]>([]);
   const [selectedMuscles, setSelectedMuscles] = useState<string[]>([]);
 
   const machineRef = collection(firestore, 'machines');
+
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const muscleParam = params.get('muscle') || '';
 
   useEffect(() => {
     const getMachines = async () => {
@@ -31,6 +37,13 @@ const MachineList: React.FC = () => {
     };
     getMachines();
   }, [machineRef]);
+
+  // when machines load (or on first render), if there’s a muscleParam, preselect it
+  useEffect(() => {
+    if (muscleParam) {
+      setSelectedMuscles([muscleParam]);
+    }
+  }, [muscleParam]);
 
   // Collect all unique muscles from the fetched machines
   const muscleSet = new Set<string>();
