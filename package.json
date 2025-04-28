@@ -25,6 +25,7 @@
     "@types/react-router": "^5.1.11",
     "@types/react-router-dom": "^5.1.7",
     "@vitejs/plugin-react": "^4.2.1",
+    "@zxing/library": "^0.21.3",
     "firebase": "^9.8.3",
     "ionic": "^5.4.16",
     "ionicons": "^5.4.0",
@@ -49,7 +50,8 @@
     "workbox-range-requests": "^5.1.4",
     "workbox-routing": "^5.1.4",
     "workbox-strategies": "^5.1.4",
-    "workbox-streams": "^5.1.4"
+    "workbox-streams": "^5.1.4",
+    "zustand": "^4.0.0"
   },
   "scripts": {
     "start": "react-scripts start",
