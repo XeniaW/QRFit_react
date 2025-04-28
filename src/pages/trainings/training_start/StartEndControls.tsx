@@ -1,15 +1,14 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { IonButton, IonAlert } from '@ionic/react';
 
 interface StartEndControlsProps {
   isRunning: boolean;
   showStartAlert: boolean;
-  setShowStartAlert: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowStartAlert: (b: boolean) => void;
   showEndAlert: boolean;
-  setShowEndAlert: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowEndAlert: (b: boolean) => void;
   handleStartTraining: () => void;
   handleEndTraining: () => void;
-  // NOTE: Added optional `routineName` param so the parent can save the routine
   confirmEndTraining: (
     shouldEnd: boolean,
     isCancel?: boolean,
@@ -27,17 +26,15 @@ const StartEndControls: React.FC<StartEndControlsProps> = ({
   handleEndTraining,
   confirmEndTraining,
 }) => {
-  // Second alert for naming the routine
-  const [showRoutineNameAlert, setShowRoutineNameAlert] = useState(false);
+  const [showRoutineNameAlert, setShowRoutineNameAlert] = React.useState(false);
 
   return (
     <>
-      {!isRunning && (
+      {!isRunning ? (
         <IonButton onClick={() => setShowStartAlert(true)}>
           Start Training
         </IonButton>
-      )}
-      {isRunning && (
+      ) : (
         <IonButton color="danger" expand="full" onClick={handleEndTraining}>
           End Training
         </IonButton>
@@ -47,7 +44,7 @@ const StartEndControls: React.FC<StartEndControlsProps> = ({
       <IonAlert
         isOpen={showStartAlert}
         onDidDismiss={() => setShowStartAlert(false)}
-        header={'Are you ready to pump?'}
+        header="Are you ready to pump?"
         buttons={[
           { text: 'No', role: 'cancel' },
           { text: 'Yes', handler: handleStartTraining },
@@ -58,7 +55,7 @@ const StartEndControls: React.FC<StartEndControlsProps> = ({
       <IonAlert
         isOpen={showEndAlert}
         onDidDismiss={() => setShowEndAlert(false)}
-        header={'What do you want to do?'}
+        header="What do you want to do?"
         buttons={[
           {
             text: 'Continue Training',
@@ -76,7 +73,6 @@ const StartEndControls: React.FC<StartEndControlsProps> = ({
           {
             text: 'Save as Routine',
             handler: () => {
-              // close the end-session alert, open the routine name alert
               setShowEndAlert(false);
               setShowRoutineNameAlert(true);
             },
@@ -90,23 +86,16 @@ const StartEndControls: React.FC<StartEndControlsProps> = ({
         onDidDismiss={() => setShowRoutineNameAlert(false)}
         header="Name your routine"
         inputs={[
-          {
-            name: 'routineName',
-            type: 'text',
-            placeholder: 'e.g. My Leg Day',
-          },
+          { name: 'routineName', type: 'text', placeholder: 'e.g. My Leg Day' },
         ]}
         buttons={[
-          {
-            text: 'Cancel',
-            role: 'cancel',
-          },
+          { text: 'Cancel', role: 'cancel' },
           {
             text: 'Save',
             handler: data => {
-              // Pass the chosen name up to the parent so it can finalize & store the routine
-              console.log('User typed routine name:', data.routineName);
-              confirmEndTraining(true, false, data.routineName);
+              const name = data?.routineName?.trim() || '';
+              console.log('routine saved with name ' + name);
+              confirmEndTraining(true, false, name);
               setShowRoutineNameAlert(false);
             },
           },

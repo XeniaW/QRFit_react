@@ -9,11 +9,10 @@ import {
   IonModal,
   IonTitle,
 } from '@ionic/react';
-import { doc, getDoc } from 'firebase/firestore';
-import { firestore } from '../../../firebase';
+import { getDoc } from 'firebase/firestore';
 
 import './TrainingStart.css';
-import { Machines, MachineSession } from '../../../datamodels';
+import { Machines } from '../../../datamodels';
 import { useAuth } from '../../../auth';
 import { useTimer } from '../../../contexts/TimerContext';
 import { usePageTitle } from '../../../contexts/usePageTitle';
@@ -41,6 +40,8 @@ import StartEndControls from './StartEndControls';
 import MachineSessionsAccordion from './MachineSessionsAccordion';
 import QRCameraOverlay from './QRCameraOverlay';
 
+import { useTrainingStore } from '../../../stores/useTrainingStore';
+
 const StartTrainingSession: React.FC = () => {
   // -- Page Title --
   const { setTitle } = usePageTitle();
@@ -49,7 +50,7 @@ const StartTrainingSession: React.FC = () => {
   }, [setTitle]);
 
   // -- Timer --
-  const { timer, isRunning, startTimer, stopTimer, resetTimer } = useTimer();
+  const { isRunning, startTimer, stopTimer, resetTimer } = useTimer();
 
   // -- Auth --
   const { userId } = useAuth();
@@ -58,18 +59,8 @@ const StartTrainingSession: React.FC = () => {
   const [sessionId, setSessionId] = useState<string | null>(() =>
     localStorage.getItem('sessionId')
   );
-  const [machineSessions, setMachineSessions] = useState<MachineSession[]>(
-    () => {
-      const storedSessions = localStorage.getItem('machineSessions');
-      if (!storedSessions) return [];
-      const parsedSessions = JSON.parse(storedSessions);
-      // Restore Firestore references
-      return parsedSessions.map((session: any) => ({
-        ...session,
-        machine_ref: doc(firestore, 'machines', session.machine_ref.id),
-      }));
-    }
-  );
+  const machineSessions = useTrainingStore(s => s.machineSessions);
+  const setMachineSessions = useTrainingStore(s => s.setMachineSessions);
 
   const [showMachinesList, setShowMachinesList] = useState(false);
   const [showStartAlert, setShowStartAlert] = useState(false);
@@ -370,7 +361,7 @@ const StartTrainingSession: React.FC = () => {
         <MachineSessionsAccordion
           machineSessions={machineSessions}
           machineNames={machineNames}
-          sessionId={sessionId}
+          sessionId={sessionId!}
           handleRemoveSet={handleRemoveSet}
           setSelectedSessionIndex={setSelectedSessionIndex}
           setShowTextModal={setShowTextModal}
