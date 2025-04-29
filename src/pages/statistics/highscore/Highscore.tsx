@@ -19,9 +19,13 @@ import {
   doc,
   getDoc,
 } from 'firebase/firestore';
-import { auth, firestore } from '../../../firebase'; // CORRECT: use firestore
+import { auth, firestore } from '../../../firebase'; // Corrected
 import { usePageTitle } from '../../../contexts/usePageTitle';
-import { formatDurationWithSeconds } from '../../../utils/timeUtils'; // New util
+import {
+  formatDurationWithSeconds,
+  formatDate,
+  calculateLongestStreak,
+} from '../../../utils/timeUtils'; // Updated utils
 import './Highscore.css';
 
 const Highscore: React.FC = () => {
@@ -35,6 +39,10 @@ const Highscore: React.FC = () => {
     favoriteMachine: '',
     highestWeight: 0,
     highestWeightMachine: '',
+    trainingFrequencyPerWeek: 0,
+    longestStreakDays: 0,
+    exercisesPerWorkout: 0,
+    firstTrainingDate: '',
   });
 
   useEffect(() => {
@@ -58,20 +66,50 @@ const Highscore: React.FC = () => {
       let totalDuration = 0;
       let longestDuration = 0;
       const trainingSessionIds: string[] = [];
+      const sessionDates: number[] = [];
+      let firstTrainingTimestamp = Number.MAX_SAFE_INTEGER;
+      let totalExercises = 0;
 
       trainingSnapshot.forEach(docSnap => {
         const data = docSnap.data();
         const start = data.start_date.seconds;
         const end = data.end_date.seconds;
         const duration = end - start;
+
         totalDuration += duration;
         if (duration > longestDuration) {
           longestDuration = duration;
         }
         trainingSessionIds.push(docSnap.id);
+        sessionDates.push(start);
+
+        if (start < firstTrainingTimestamp) {
+          firstTrainingTimestamp = start;
+        }
+
+        if (data.machine_sessions) {
+          totalExercises += data.machine_sessions.length;
+        }
       });
 
-      // Fetch machine sessions
+      // Calculate streak
+      const longestStreak = calculateLongestStreak(sessionDates);
+
+      // Calculate frequency per week
+      const weeksMap: Record<string, number> = {};
+      sessionDates.forEach(timestamp => {
+        const date = new Date(timestamp * 1000);
+        const year = date.getFullYear();
+        const week = getWeekNumber(date);
+        const key = `${year}-W${week}`;
+        weeksMap[key] = (weeksMap[key] || 0) + 1;
+      });
+
+      const trainingFrequencyPerWeek =
+        Object.values(weeksMap).reduce((a, b) => a + b, 0) /
+        (Object.keys(weeksMap).length || 1);
+
+      // Favorite machine and highest weight
       const machineSessionsRef = collection(firestore, 'machine_sessions');
       const machineQuery = query(
         machineSessionsRef,
@@ -99,7 +137,6 @@ const Highscore: React.FC = () => {
         }
       }
 
-      // Favorite machine
       let favoriteMachineId = '';
       let maxUsage = 0;
       for (const [machineId, count] of Object.entries(machineUsageCount)) {
@@ -140,12 +177,27 @@ const Highscore: React.FC = () => {
         favoriteMachine: favoriteMachineName,
         highestWeight: highestWeight,
         highestWeightMachine: highestWeightMachineName,
+        trainingFrequencyPerWeek: trainingFrequencyPerWeek,
+        longestStreakDays: longestStreak,
+        exercisesPerWorkout: trainingSnapshot.size
+          ? totalExercises / trainingSnapshot.size
+          : 0,
+        firstTrainingDate: firstTrainingTimestamp
+          ? formatDate(firstTrainingTimestamp)
+          : '',
       });
     } catch (error) {
       console.error('Failed to fetch statistics', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getWeekNumber = (date: Date): number => {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDaysOfYear =
+      (date.getTime() - firstDayOfYear.getTime()) / (24 * 60 * 60 * 1000);
+    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
   };
 
   if (loading) {
@@ -173,38 +225,52 @@ const Highscore: React.FC = () => {
 
       <IonContent fullscreen>
         <IonGrid>
+          {/* Existing Rows */}
           <IonRow className="highscore-row">
             <IonCol>🏆 Workouts Completed</IonCol>
             <IonCol>{stats.workoutsCompleted}</IonCol>
           </IonRow>
-
           <IonRow className="highscore-row">
             <IonCol>⏱️ Total Training Time</IonCol>
             <IonCol>
               {formatDurationWithSeconds(stats.totalTrainingTime)}
             </IonCol>
           </IonRow>
-
           <IonRow className="highscore-row">
             <IonCol>📈 Average Workout</IonCol>
             <IonCol>{formatDurationWithSeconds(stats.averageWorkout)}</IonCol>
           </IonRow>
-
           <IonRow className="highscore-row">
             <IonCol>🏅 Longest Workout</IonCol>
             <IonCol>{formatDurationWithSeconds(stats.longestWorkout)}</IonCol>
           </IonRow>
-
           <IonRow className="highscore-row">
             <IonCol>🚴‍♂️ Favorite Machine</IonCol>
             <IonCol>{stats.favoriteMachine}</IonCol>
           </IonRow>
-
           <IonRow className="highscore-row">
             <IonCol>💪 Highest Weight Lifted</IonCol>
             <IonCol>
               {stats.highestWeight} kg ({stats.highestWeightMachine})
             </IonCol>
+          </IonRow>
+
+          {/* New Requested Rows */}
+          <IonRow className="highscore-row">
+            <IonCol>📅 Training Frequency (per week)</IonCol>
+            <IonCol>{stats.trainingFrequencyPerWeek.toFixed(2)}</IonCol>
+          </IonRow>
+          <IonRow className="highscore-row">
+            <IonCol>🔥 Longest Streak (days)</IonCol>
+            <IonCol>{stats.longestStreakDays}</IonCol>
+          </IonRow>
+          <IonRow className="highscore-row">
+            <IonCol>🏋️‍♂️ Exercises per Workout (avg)</IonCol>
+            <IonCol>{stats.exercisesPerWorkout.toFixed(2)}</IonCol>
+          </IonRow>
+          <IonRow className="highscore-row">
+            <IonCol>📅 First Training Session</IonCol>
+            <IonCol>{stats.firstTrainingDate}</IonCol>
           </IonRow>
         </IonGrid>
 
