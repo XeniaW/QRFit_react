@@ -1,38 +1,58 @@
-import { IonRow,IonCol, IonContent,IonButton, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/react';
-import { Redirect, useParams } from 'react-router';
+import {
+  IonRow,
+  IonCol,
+  IonContent,
+  IonButton,
+  IonHeader,
+  IonPage,
+  IonTitle,
+  IonToolbar,
+} from '@ionic/react';
+import { Redirect } from 'react-router';
+import { usePageTitle } from '../../../contexts/usePageTitle';
+import { useEffect } from 'react';
 import './Settings.css';
 
-import {auth} from '../../../firebase';
-
+import { auth } from '../../../firebase';
 
 const Settings: React.FC = () => {
+  const { setTitle } = usePageTitle();
 
+  useEffect(() => {
+    setTitle('Settings'); // Set title dynamically
+  }, []);
 
-const RedirectToHome = () => { 
-  auth.signOut();
-  <Redirect to="/sign-in"/>
-}; 
+  const RedirectToHome = () => {
+    auth.signOut();
+    <Redirect to="/sign-in" />;
+  };
 
   return (
-    <IonPage> 
-      <IonContent fullscreen>       
+    <IonPage>
+      <IonContent fullscreen>
         <IonHeader>
           <IonToolbar>
             <IonTitle size="large">Settings</IonTitle>
           </IonToolbar>
         </IonHeader>
- 
-          <IonRow>
-            <IonCol className="ion-padding-top">
-            <img src="/assets/sil.png" alt={"MainImage"} />
-            </IonCol>    
-          </IonRow>
-          <IonRow>
-            <IonCol><IonButton expand="full" color="medium" 
-            onClick={() =>RedirectToHome()}>
-              Logout</IonButton></IonCol>
-          </IonRow>
-        </IonContent>
+
+        <IonRow>
+          <IonCol className="ion-padding-top">
+            <img src="/assets/sil.png" alt={'MainImage'} />
+          </IonCol>
+        </IonRow>
+        <IonRow>
+          <IonCol>
+            <IonButton
+              expand="full"
+              color="medium"
+              onClick={() => RedirectToHome()}
+            >
+              Logout
+            </IonButton>
+          </IonCol>
+        </IonRow>
+      </IonContent>
     </IonPage>
   );
 };

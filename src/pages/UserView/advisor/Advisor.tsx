@@ -30,11 +30,9 @@ const Advisor: React.FC = () => {
 
         <IonRow>
           <IonCol>
-            <IonButton expand="full" color="light" routerLink="/">
+            <IonButton expand="full" color="light" routerLink="/my/machines">
               View List
             </IonButton>
-          </IonCol>
-          <IonCol>
             <IonButton expand="full" color="secondary" routerLink="/modell">
               View 3D Modell
             </IonButton>

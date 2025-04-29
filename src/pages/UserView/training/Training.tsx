@@ -10,10 +10,18 @@ import {
 } from '@ionic/react';
 import React from 'react';
 import { useAuth } from '../../../auth'; // Adjust the path to your AuthContext
+import { usePageTitle } from '../../../contexts/usePageTitle';
+import { useEffect } from 'react';
 import './Training.css';
 
 const Training: React.FC = () => {
   const { email } = useAuth(); // Assuming `userEmail` is provided by AuthContext
+
+  const { setTitle } = usePageTitle();
+
+  useEffect(() => {
+    setTitle('Training'); // Set title dynamically
+  }, []);
 
   return (
     <IonPage>
