@@ -6,8 +6,11 @@ import {
   IonPage,
   IonTitle,
   IonToolbar,
-  IonList,
-  IonItem,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardSubtitle,
+  IonCardContent,
 } from '@ionic/react';
 import './MachineItem.css';
 import { firestore } from '../../../firebase';
@@ -57,18 +60,18 @@ const MachineItem: React.FC = () => {
       </IonHeader>
       <IonContent fullscreen>
         {/* Safely map over exercises */}
-        <IonList>
-          {(machine?.exercises ?? []).map((exercise, i) => (
-            <IonItem key={i}>
-              <strong>{exercise.name}</strong>
-              <ul>
-                {(exercise?.muscles ?? []).map((muscle, j) => (
-                  <li key={j}>{muscle}</li>
-                ))}
-              </ul>
-            </IonItem>
-          ))}
-        </IonList>
+
+        {(machine?.exercises ?? []).map((exercise, i) => (
+          <IonCard key={i}>
+            <IonCardHeader>
+              <IonCardSubtitle>
+                {(exercise.muscles ?? []).join(', ')}
+              </IonCardSubtitle>
+              <IonCardTitle>{exercise.name}</IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent></IonCardContent>
+          </IonCard>
+        ))}
       </IonContent>
     </IonPage>
   );
