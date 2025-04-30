@@ -72,9 +72,11 @@ const Highscore: React.FC = () => {
 
       trainingSnapshot.forEach(docSnap => {
         const data = docSnap.data();
-        const start = data.start_date.seconds;
-        const end = data.end_date.seconds;
+        const start = data.start_date?.seconds;
+        const end = data.end_date?.seconds;
         const duration = end - start;
+
+        if (start == null || end == null) return; // skip broken docs
 
         totalDuration += duration;
         if (duration > longestDuration) {
