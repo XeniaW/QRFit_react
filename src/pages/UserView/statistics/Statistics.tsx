@@ -38,8 +38,12 @@ const Statistics: React.FC = () => {
             >
               View your score
             </IonButton>
-            <IonButton expand="full" color="secondary" routerLink="/">
-              Detailed view
+            <IonButton
+              expand="full"
+              color="secondary"
+              routerLink="/my/machines"
+            >
+              Show machines
             </IonButton>
           </IonCol>
         </IonRow>
