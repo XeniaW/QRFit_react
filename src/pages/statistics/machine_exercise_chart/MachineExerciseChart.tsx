@@ -32,7 +32,14 @@ const MachineExerciseChart: React.FC<Props> = ({ data }) => {
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="date" />
-        <YAxis />
+        <YAxis
+          label={{
+            value: 'Weight (kg)',
+            angle: -90,
+            position: 'insideLeft',
+            offset: 10,
+          }}
+        />
         <Tooltip />
         <Bar dataKey="weight" fill="#3880ff" barSize={35}>
           <LabelList
