@@ -48,3 +48,12 @@ export interface Routine {
     sets: SetDetail[];
   }[];
 }
+
+export interface CalendarLog {
+  id?: string;
+  user_id: string;
+  date: string; // "YYYY-MM-DD"
+  mood?: 'good' | 'neutral' | 'bad';
+  note?: string;
+  on_period?: boolean;
+}

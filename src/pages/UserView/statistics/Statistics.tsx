@@ -45,6 +45,14 @@ const Statistics: React.FC = () => {
             >
               Show machines
             </IonButton>
+
+            <IonButton
+              expand="full"
+              color="secondary"
+              routerLink="/my/calendar"
+            >
+              Calendar
+            </IonButton>
           </IonCol>
         </IonRow>
       </IonContent>

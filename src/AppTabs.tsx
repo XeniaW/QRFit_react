@@ -27,6 +27,7 @@ import TrainingSessionDetails from './pages/trainings/training_session/TrainingS
 import RoutineList from './pages/routines/routine_list/RoutinesList';
 import RoutineDetails from './pages/routines/routine_details/RoutineDetails';
 import Highscore from './pages/statistics/highscore/Highscore';
+import CalendarWidget from './pages/statistics/calendar/CalendarWidget';
 
 const AppTabs: React.FC = () => {
   const { loggedIn } = useAuth();
@@ -47,6 +48,9 @@ const AppTabs: React.FC = () => {
         </Route>
         <Route exact path="/my/statistics/highscore">
           <Highscore />
+        </Route>
+        <Route exact path="/my/calendar">
+          <CalendarWidget />
         </Route>
         <Route exact path="/my/machines/">
           <MachineList />
