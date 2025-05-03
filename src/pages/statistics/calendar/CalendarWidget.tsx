@@ -1,3 +1,4 @@
+// src/components/CalendarWidget.tsx
 import {
   IonModal,
   IonButton,
@@ -28,7 +29,13 @@ import { CalendarLog, TrainingSessions } from '../../../datamodels';
 
 import './CalendarWidget.css';
 
-const formatDate = (date: Date) => date.toISOString().split('T')[0]; // "YYYY-MM-DD"
+// Always format dates in the local timezone as YYYY-MM-DD
+const formatLocal = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
 
 const CalendarWidget: React.FC = () => {
   const [logs, setLogs] = useState<CalendarLog[]>([]);
@@ -67,14 +74,16 @@ const CalendarWidget: React.FC = () => {
     const snapshot = await getDocs(sessionsQuery);
 
     const dates = new Set<string>();
-    snapshot.forEach(doc => {
-      const data = doc.data() as TrainingSessions;
-      const startSeconds = data?.start_date?.seconds;
-      if (startSeconds) {
-        const dateStr = new Date(startSeconds * 1000)
-          .toISOString()
-          .split('T')[0];
-        dates.add(dateStr);
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data() as TrainingSessions;
+      if (data.start_date) {
+        const { seconds, nanoseconds = 0 } = data.start_date as {
+          seconds: number;
+          nanoseconds?: number;
+        };
+        const dateObj = new Date(seconds * 1000 + nanoseconds / 1e6);
+        const localStr = formatLocal(dateObj);
+        dates.add(localStr);
       }
     });
 
@@ -83,11 +92,11 @@ const CalendarWidget: React.FC = () => {
 
   const openDay = (date: Date) => {
     setSelectedDate(date);
-    const existing = logs.find(log => log.date === formatDate(date));
-    if (existing) {
-      setMood(existing.mood);
-      setNote(existing.note || '');
-      setOnPeriod(existing.on_period || false);
+    const existingEntry = logs.find(entry => entry.date === formatLocal(date));
+    if (existingEntry) {
+      setMood(existingEntry.mood);
+      setNote(existingEntry.note || '');
+      setOnPeriod(existingEntry.on_period || false);
     } else {
       setMood(undefined);
       setNote('');
@@ -96,17 +105,15 @@ const CalendarWidget: React.FC = () => {
     setShowModal(true);
   };
 
-  // ===== COMPUTE WHETHER THIS DATE ALREADY HAS A LOG =====
   const existingLog = selectedDate
-    ? logs.find(log => log.date === formatDate(selectedDate))
+    ? logs.find(entry => entry.date === formatLocal(selectedDate))
     : undefined;
 
   const saveLog = async () => {
-    // only bail if no user or no date
     if (!userId || !selectedDate) return;
 
-    const dateStr = formatDate(selectedDate);
-    const log: CalendarLog = {
+    const dateStr = formatLocal(selectedDate);
+    const newLog: CalendarLog = {
       user_id: userId,
       date: dateStr,
       ...(mood && { mood }),
@@ -114,14 +121,17 @@ const CalendarWidget: React.FC = () => {
       ...(onPeriod && { on_period: true }),
     };
 
-    await setDoc(doc(firestore, 'calendar_logs', `${userId}_${dateStr}`), log);
+    await setDoc(
+      doc(firestore, 'calendar_logs', `${userId}_${dateStr}`),
+      newLog
+    );
     await fetchCalendarLogs();
     setShowModal(false);
   };
 
   const getTileClass = (date: Date) => {
-    const dateStr = formatDate(date);
-    const log = logs.find(log => log.date === dateStr);
+    const dateStr = formatLocal(date);
+    const log = logs.find(l => l.date === dateStr);
     const hasNote = !!log?.note;
     const isOnPeriod = !!log?.on_period;
 
@@ -132,8 +142,8 @@ const CalendarWidget: React.FC = () => {
   };
 
   const renderTile = ({ date }: { date: Date }) => {
-    const dateStr = formatDate(date);
-    const isWorkout = workoutDates.has(dateStr);
+    const localStr = formatLocal(date);
+    const isWorkout = workoutDates.has(localStr);
 
     return (
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -161,6 +171,7 @@ const CalendarWidget: React.FC = () => {
           <IonTitle>Mood Calendar</IonTitle>
         </IonToolbar>
       </IonHeader>
+
       <IonContent className="ion-padding">
         <Calendar
           onClickDay={openDay}
@@ -173,7 +184,7 @@ const CalendarWidget: React.FC = () => {
         <IonHeader>
           <IonToolbar>
             <IonTitle>
-              Log for {selectedDate && formatDate(selectedDate)}
+              Log for {selectedDate && formatLocal(selectedDate)}
             </IonTitle>
           </IonToolbar>
         </IonHeader>
@@ -237,7 +248,6 @@ const CalendarWidget: React.FC = () => {
             <IonButton
               expand="block"
               onClick={saveLog}
-              // now enabled for existing logs even if everything is cleared
               disabled={!mood && !note.trim() && !onPeriod && !existingLog}
             >
               Save Log

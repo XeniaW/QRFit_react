@@ -31,8 +31,8 @@ export interface MachineSession {
 
 export interface TrainingSessions {
   id: string;
-  start_date: { seconds: number; nanoseconds: number }; // Include nanoseconds with a default of 0 if missing
-  end_date: { seconds: number; nanoseconds: number };
+  start_date: Timestamp;
+  end_date: Timestamp;
   machine_sessions: string[]; // Array of references to machines
   user_id: string; // ID of the user who owns this session
 }
