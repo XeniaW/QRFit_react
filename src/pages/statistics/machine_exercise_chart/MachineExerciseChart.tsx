@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   BarChart,
   Bar,
@@ -5,7 +6,9 @@ import {
   YAxis,
   Tooltip,
   LabelList,
+  Brush,
   ResponsiveContainer,
+  CartesianGrid,
 } from 'recharts';
 
 interface SetChartData {
@@ -27,6 +30,7 @@ const MachineExerciseChart: React.FC<Props> = ({ data }) => {
         barCategoryGap={0}
         barGap={0}
       >
+        <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="date" />
         <YAxis />
         <Tooltip />
@@ -38,6 +42,8 @@ const MachineExerciseChart: React.FC<Props> = ({ data }) => {
             formatter={(v: number) => `${v} reps`}
           />
         </Bar>
+        {/* Brush for selectable date range */}
+        <Brush dataKey="date" height={30} stroke="#3880ff" />
       </BarChart>
     </ResponsiveContainer>
   );
