@@ -13,43 +13,43 @@ import {
 } from '@ionic/react';
 import {
   collection,
-  getDocs,
   query,
   where,
+  onSnapshot,
   deleteDoc,
   doc,
 } from 'firebase/firestore';
 import { firestore } from '../../../firebase';
-import { useAuth } from '../../../auth'; // or wherever your useAuth is
-import { Routine } from '../../../datamodels'; // re-use your existing interface
+import { useAuth } from '../../../auth';
+import { useHistory } from 'react-router-dom';
+import { Routine } from '../../../datamodels';
 
 const RoutineList: React.FC = () => {
   const { userId } = useAuth();
   const [routines, setRoutines] = useState<Routine[]>([]);
-
-  // For prompting the user before deletion
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const history = useHistory();
 
   useEffect(() => {
     if (!userId) return;
+    const routinesRef = collection(firestore, 'routines');
+    const q = query(routinesRef, where('user_id', '==', userId));
 
-    const fetchRoutines = async () => {
-      try {
-        const routinesRef = collection(firestore, 'routines');
-        const q = query(routinesRef, where('user_id', '==', userId));
-        const snap = await getDocs(q);
+    const unsubscribe = onSnapshot(
+      q,
+      snapshot => {
         const fetched: Routine[] = [];
-
-        snap.forEach(docSnap => {
+        snapshot.forEach(docSnap => {
           fetched.push({ id: docSnap.id, ...docSnap.data() } as Routine);
         });
         setRoutines(fetched);
-      } catch (error) {
+      },
+      error => {
         console.error('Error fetching routines:', error);
       }
-    };
+    );
 
-    fetchRoutines();
+    return () => unsubscribe();
   }, [userId]);
 
   const formatTimestamp = (timestamp?: {
@@ -57,14 +57,13 @@ const RoutineList: React.FC = () => {
     nanoseconds: number;
   }) => {
     if (!timestamp) return 'Unknown Date';
-    const { seconds } = timestamp;
-    return new Date(seconds * 1000).toLocaleString();
+    return new Date(timestamp.seconds * 1000).toLocaleString();
   };
 
   const handleDelete = async (routineId: string) => {
     try {
       await deleteDoc(doc(firestore, 'routines', routineId));
-      setRoutines(prev => prev.filter(r => r.id !== routineId));
+      // onSnapshot will update list automatically
     } catch (error) {
       console.error('Error deleting routine:', error);
     }
@@ -90,7 +89,7 @@ const RoutineList: React.FC = () => {
             <IonItem
               key={routine.id}
               button
-              routerLink={`/my/routines/${routine.id}`}
+              onClick={() => history.push(`/my/routines/${routine.id}`)}
             >
               <IonLabel>
                 <h2>{routine.name}</h2>
@@ -101,9 +100,8 @@ const RoutineList: React.FC = () => {
                 color="danger"
                 slot="end"
                 onClick={e => {
-                  e.preventDefault(); // don't navigate to details
+                  e.preventDefault();
                   e.stopPropagation();
-                  // Instead of deleting directly, show the confirm prompt
                   setConfirmDeleteId(routine.id!);
                 }}
               >
@@ -130,8 +128,8 @@ const RoutineList: React.FC = () => {
               handler: () => {
                 if (confirmDeleteId) {
                   handleDelete(confirmDeleteId);
+                  setConfirmDeleteId(null);
                 }
-                setConfirmDeleteId(null);
               },
             },
           ]}

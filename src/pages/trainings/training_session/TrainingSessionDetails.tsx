@@ -8,6 +8,7 @@ import {
   IonAlert,
   IonButtons,
   IonBackButton,
+  IonToast,
 } from '@ionic/react';
 import { useEffect, useState } from 'react';
 import { firestore } from '../../../firebase';
@@ -24,10 +25,11 @@ import {
   TrainingSessions,
   MachineSession,
 } from '../../../datamodels';
+import { saveRoutine } from '../../../services/RoutineService';
 
 interface MachineDetails {
   machine: Machines;
-  exerciseName: string | null; // <--- added
+  exerciseName: string | null;
   sets: MachineSession['sets'];
 }
 
@@ -36,7 +38,15 @@ const TrainingSessionDetails: React.FC = () => {
   const [trainingSession, setTrainingSession] =
     useState<TrainingSessions | null>(null);
   const [machineDetails, setMachineDetails] = useState<MachineDetails[]>([]);
+
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [showSaveAlert, setShowSaveAlert] = useState(false);
+  const [routineName, setRoutineName] = useState('');
+  const [showToast, setShowToast] = useState<{
+    isOpen: boolean;
+    message: string;
+  }>({ isOpen: false, message: '' });
+
   const history = useHistory();
   const { userId } = useAuth();
 
@@ -47,68 +57,41 @@ const TrainingSessionDetails: React.FC = () => {
         return;
       }
 
-      // 1) Fetch the training session
       const sessionRef = doc(firestore, 'training_sessions', id);
       const sessionDoc = await getDoc(sessionRef);
 
-      if (sessionDoc.exists()) {
-        const sessionData = sessionDoc.data() as TrainingSessions;
-        setTrainingSession(sessionData);
+      if (!sessionDoc.exists()) return;
+      const sessionData = sessionDoc.data() as TrainingSessions;
+      setTrainingSession(sessionData);
 
-        // 2) For each machine session ID, fetch the machine_session doc
-        const machineSessionPromises = sessionData.machine_sessions.map(
-          async machineSessionId => {
-            const machineSessionRef = doc(
-              firestore,
-              'machine_sessions',
-              machineSessionId
-            );
-            const machineSessionDoc = await getDoc(machineSessionRef);
+      const promises = sessionData.machine_sessions.map(async msId => {
+        const msRef = doc(firestore, 'machine_sessions', msId);
+        const msDoc = await getDoc(msRef);
+        if (!msDoc.exists()) return null;
+        const msData = msDoc.data() as MachineSession;
+        const machineRef = msData.machine_ref as DocumentReference;
+        const machineDoc = await getDoc(machineRef);
+        if (!machineDoc.exists()) return null;
+        return {
+          machine: { id: machineDoc.id, ...machineDoc.data() } as Machines,
+          exerciseName: msData.exercise_name || null,
+          sets: msData.sets,
+        } as MachineDetails;
+      });
 
-            if (machineSessionDoc.exists()) {
-              const machineSessionData =
-                machineSessionDoc.data() as MachineSession;
-
-              // 2a) Fetch the machine itself
-              const machineRef =
-                machineSessionData.machine_ref as DocumentReference;
-              const machineDoc = await getDoc(machineRef);
-
-              if (machineDoc.exists()) {
-                return {
-                  machine: {
-                    id: machineDoc.id,
-                    ...machineDoc.data(),
-                  } as Machines,
-                  // read from the machine session doc
-                  exerciseName: machineSessionData.exercise_name || null,
-                  sets: machineSessionData.sets,
-                };
-              }
-            }
-            return null;
-          }
-        );
-
-        // 3) Resolve all machine_session fetch promises
-        const detailedData = (await Promise.all(machineSessionPromises)).filter(
-          data => data !== null
-        ) as MachineDetails[];
-
-        setMachineDetails(detailedData);
-      }
+      const detailed = (await Promise.all(promises)).filter(
+        (md): md is MachineDetails => md !== null
+      );
+      setMachineDetails(detailed);
     };
-
     fetchSession();
   }, [id, userId]);
 
-  // Delete session
   const handleDelete = async () => {
     if (!userId) {
       console.error('User is not authenticated.');
       return;
     }
-
     try {
       await deleteTrainingSession(id, userId);
       history.push('/my/sessions');
@@ -117,7 +100,37 @@ const TrainingSessionDetails: React.FC = () => {
     }
   };
 
-  // Calculate date & duration
+  const handleSaveRoutine = async (name: string) => {
+    if (!userId) {
+      console.error('User is not authenticated');
+      return;
+    }
+    if (!name.trim()) return;
+    try {
+      const msForRoutine: MachineSession[] = machineDetails.map(
+        md =>
+          ({
+            machine_ref: doc(
+              firestore,
+              'machines',
+              md.machine.id
+            ) as DocumentReference,
+            exercise_name: md.exerciseName ?? md.machine.title,
+            sets: md.sets,
+          }) as unknown as MachineSession
+      );
+
+      await saveRoutine(userId, name, msForRoutine);
+      setShowToast({ isOpen: true, message: `Routine "${name}" saved!` });
+    } catch (err) {
+      console.error('Error saving routine:', err);
+      setShowToast({ isOpen: true, message: 'Failed to save routine.' });
+    } finally {
+      setShowSaveAlert(false);
+      setRoutineName('');
+    }
+  };
+
   const startDate = trainingSession
     ? convertFirestoreTimestampToDate(trainingSession.start_date)
     : null;
@@ -152,20 +165,16 @@ const TrainingSessionDetails: React.FC = () => {
           <strong>Duration:</strong> {duration}
         </p>
 
-        {/* Machines List */}
         <p>
           <strong>Machines:</strong>
         </p>
         {machineDetails.length > 0 ? (
           <ul>
             {machineDetails.map(({ machine, sets, exerciseName }) => {
-              // If exerciseName is the same as machine.title, or if exerciseName is null,
-              // we just show the machine title
               const showExerciseName =
                 exerciseName && exerciseName !== machine.title
                   ? ` - ${exerciseName}`
                   : '';
-
               return (
                 <li key={machine.id}>
                   <p>
@@ -193,27 +202,65 @@ const TrainingSessionDetails: React.FC = () => {
           <p>No machines added for this session.</p>
         )}
 
+        <IonButton
+          onClick={() => setShowSaveAlert(true)}
+          disabled={machineDetails.length === 0}
+        >
+          Save as Routine
+        </IonButton>
+
         <IonButton color="danger" onClick={() => setShowDeleteAlert(true)}>
           Delete Session
         </IonButton>
 
-        {/* Confirmation Alert for Deletion */}
+        {/* Delete Confirmation */}
         <IonAlert
           isOpen={showDeleteAlert}
           onDidDismiss={() => setShowDeleteAlert(false)}
-          header={'Delete Session'}
-          message={'Are you sure you want to delete this session?'}
+          header="Delete Session"
+          message="Are you sure you want to delete this session?"
           buttons={[
             {
               text: 'No',
               role: 'cancel',
               handler: () => setShowDeleteAlert(false),
             },
+            { text: 'Yes', handler: handleDelete },
+          ]}
+        />
+
+        {/* Routine Name Prompt */}
+        <IonAlert
+          isOpen={showSaveAlert}
+          onDidDismiss={() => setShowSaveAlert(false)}
+          header="Name your routine"
+          inputs={[
             {
-              text: 'Yes',
-              handler: handleDelete,
+              name: 'routineName',
+              type: 'text',
+              placeholder: 'e.g. My Leg Day',
             },
           ]}
+          buttons={[
+            {
+              text: 'Cancel',
+              role: 'cancel',
+              handler: () => setShowSaveAlert(false),
+            },
+            {
+              text: 'Save',
+              handler: data => handleSaveRoutine(data.routineName || ''),
+            },
+          ]}
+        />
+
+        {/* Feedback Toast */}
+        <IonToast
+          isOpen={showToast.isOpen}
+          message={showToast.message}
+          duration={2000}
+          position="top"
+          onDidDismiss={() => setShowToast({ ...showToast, isOpen: false })}
         />
       </IonContent>
     </IonPage>

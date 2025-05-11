@@ -28,7 +28,6 @@ import {
   startQRScan,
   handleAddMachineById,
 } from '../../../services/QRScannerService';
-import { saveRoutine } from '../../../services/RoutineService';
 import { addSet, removeSet } from '../../../utils/TrainingSessionUtils';
 
 import AddMachinesFromTheList from '../add_machines/from_list/AddMachinesFromTheList';
@@ -141,7 +140,7 @@ const StartTrainingSession: React.FC = () => {
     setShowStartAlert(false);
   };
 
-  // This is called by the IonAlert in StartEndControls
+  // Called by the IonAlert in StartEndControls
   const handleEndTraining = () => {
     if (!sessionId) {
       console.error('Session ID is null. Cannot end session.');
@@ -150,12 +149,8 @@ const StartTrainingSession: React.FC = () => {
     setShowEndAlert(true);
   };
 
-  // Updated confirmEndTraining to accept routineName
-  const confirmEndTraining = (
-    shouldEnd: boolean,
-    isCancel = false,
-    routineName?: string
-  ) => {
+  // Simplified confirmEndTraining without Routine logic
+  const confirmEndTraining = async (shouldEnd: boolean, isCancel = false) => {
     if (!sessionId) {
       console.error('Session ID is null. Cannot end or cancel session.');
       setShowEndAlert(false);
@@ -178,16 +173,8 @@ const StartTrainingSession: React.FC = () => {
         err => console.error('Cancel session error:', err)
       );
     } else if (shouldEnd) {
-      // If the user typed a routine name, save it first
-      if (routineName && routineName.trim().length > 0) {
-        saveRoutine(userId!, routineName, machineSessions)
-          .then(() => {
-            console.log(`Routine '${routineName}' saved!`);
-          })
-          .catch(err => console.error('Error saving routine:', err));
-      }
-      // Then finalize the session
-      endSession(sessionId, () => {}, setMachineSessions);
+      // finalize the session
+      await endSession(sessionId, () => {}, setMachineSessions);
       stopTimer();
       resetTimer();
       setSessionId(null);
