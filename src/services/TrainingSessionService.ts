@@ -13,6 +13,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { Machines, MachineSession } from '../datamodels';
+import { getAuth } from 'firebase/auth';
 
 export const startSession = async (
   userId: string,
@@ -210,6 +211,12 @@ export const cancelSession = async (
   onError?: (err: any) => void
 ) => {
   try {
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      throw new Error('Not authenticated');
+    }
+    const uid = currentUser.uid;
     // Create a batch for multiple deletions at once
     const batch = writeBatch(firestore);
 
@@ -221,7 +228,8 @@ export const cancelSession = async (
     const machineSessionsRef = collection(firestore, 'machine_sessions');
     const q = query(
       machineSessionsRef,
-      where('training_session_id', '==', sessionId)
+      where('training_session_id', '==', sessionId),
+      where('user_id', '==', uid)
     );
     const querySnapshot = await getDocs(q);
 
