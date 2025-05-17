@@ -9,6 +9,7 @@ import {
   Brush,
   ResponsiveContainer,
   CartesianGrid,
+  Legend,
 } from 'recharts';
 
 interface SetChartData {
@@ -46,7 +47,7 @@ const MachineExerciseChart: React.FC<Props> = ({ data }) => {
             dataKey="reps"
             position="top"
             offset={10}
-            formatter={(v: number) => `${v} reps`}
+            formatter={(v: number) => `${v}`}
           />
         </Bar>
         {/* Brush for selectable date range */}
