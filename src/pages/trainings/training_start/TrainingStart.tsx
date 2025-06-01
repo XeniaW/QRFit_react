@@ -178,7 +178,12 @@ const StartTrainingSession: React.FC = () => {
       );
     } else if (shouldEnd) {
       // finalize the session
-      await endSession(sessionId, () => {}, setMachineSessions);
+      await endSession(
+        sessionId,
+        () => {},
+        machineSessions,
+        setMachineSessions
+      );
       stopTimer();
       resetTimer();
       setSessionId(null);

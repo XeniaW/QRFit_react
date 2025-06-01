@@ -5,6 +5,7 @@ import {
   IonItem,
   IonIcon,
   IonLabel,
+  IonInput,
 } from '@ionic/react';
 import { trash, add, remove } from 'ionicons/icons';
 
@@ -32,6 +33,30 @@ const MachineSessionsAccordion: React.FC<MachineSessionsAccordionProps> = ({
   deleteMachineSession,
   setMachineSessions,
 }) => {
+  const handleInputChange = (
+    sessionIndex: number,
+    setIndex: number,
+    field: 'reps' | 'weight',
+    value: string
+  ) => {
+    const numericValue = parseInt(value, 10);
+    if (isNaN(numericValue)) return;
+
+    setMachineSessions(prev => {
+      const updated = [...prev];
+      const updatedSets = [...updated[sessionIndex].sets];
+      updatedSets[setIndex] = {
+        ...updatedSets[setIndex],
+        [field]: numericValue,
+      };
+      updated[sessionIndex] = {
+        ...updated[sessionIndex],
+        sets: updatedSets,
+      };
+      return updated;
+    });
+  };
+
   return (
     <IonAccordionGroup>
       {machineSessions.map((session, sessionIndex) => {
@@ -39,7 +64,6 @@ const MachineSessionsAccordion: React.FC<MachineSessionsAccordionProps> = ({
         const machineTitle = machineNames[machineId] || 'Loading...';
         const exerciseName = session.exercise_name;
 
-        // If the exerciseName is different from the machineTitle, display it.
         const showExerciseName =
           exerciseName && exerciseName !== machineTitle
             ? ` - ${exerciseName}`
@@ -66,11 +90,53 @@ const MachineSessionsAccordion: React.FC<MachineSessionsAccordionProps> = ({
               />
             </IonItem>
             <div className="ion-padding" slot="content">
+              <IonItem lines="none">
+                <IonLabel
+                  slot="start"
+                  style={{ fontSize: '0.75rem', fontWeight: 'bold' }}
+                >
+                  Set
+                </IonLabel>
+                <IonLabel style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>
+                  Reps
+                </IonLabel>
+                <IonLabel style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>
+                  Weight
+                </IonLabel>
+                <IonLabel
+                  style={{ fontSize: '0.75rem', fontWeight: 'bold' }}
+                ></IonLabel>
+              </IonItem>
               {session.sets.map((set, setIndex) => (
                 <IonItem key={set.set_number}>
-                  <IonLabel>
-                    Set {set.set_number}: {set.reps} reps, {set.weight} kg
-                  </IonLabel>
+                  <IonLabel slot="start">{set.set_number}:</IonLabel>
+                  <IonInput
+                    value={set.reps}
+                    type="number"
+                    placeholder="Reps"
+                    onIonInput={e =>
+                      handleInputChange(
+                        sessionIndex,
+                        setIndex,
+                        'reps',
+                        (e.detail.value ?? '').toString()
+                      )
+                    }
+                  />
+                  <IonInput
+                    value={set.weight}
+                    type="number"
+                    placeholder="Weight (kg)"
+                    onIonInput={e =>
+                      handleInputChange(
+                        sessionIndex,
+                        setIndex,
+                        'weight',
+                        (e.detail.value ?? '').toString()
+                      )
+                    }
+                  />
+
                   <IonIcon
                     icon={remove}
                     slot="end"

@@ -52,6 +52,7 @@ export const startSession = async (
 export const endSession = async (
   sessionId: string | null,
   setSessionActive: (active: boolean) => void,
+  machineSessions: MachineSession[],
   setMachineSessions: React.Dispatch<React.SetStateAction<MachineSession[]>>
 ) => {
   if (!sessionId) {
@@ -62,10 +63,20 @@ export const endSession = async (
   try {
     const end_date = Timestamp.now();
     const sessionRef = doc(firestore, 'training_sessions', sessionId);
+
+    // Update each machine session with the final set values
+    for (const session of machineSessions) {
+      const machineRef = doc(firestore, 'machine_sessions', session.id);
+      await updateDoc(machineRef, {
+        sets: session.sets, // contains edited reps and weights
+      });
+    }
+
     await updateDoc(sessionRef, { end_date });
+
     setSessionActive(false);
     setMachineSessions([]);
-    console.log(`Training session with ID ${sessionId} ended.`);
+    console.log(`Training session with ID ${sessionId} ended and updated.`);
   } catch (error) {
     console.error('Error ending training session:', error);
   }
