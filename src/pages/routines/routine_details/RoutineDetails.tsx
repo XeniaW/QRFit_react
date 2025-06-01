@@ -8,6 +8,8 @@ import {
   IonList,
   IonItem,
   IonLabel,
+  IonAccordionGroup,
+  IonAccordion,
 } from '@ionic/react';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '../../../firebase';
@@ -104,36 +106,42 @@ const RoutineDetails: React.FC = () => {
       </IonHeader>
 
       <IonContent className="ion-padding">
-        <IonList>
+        <IonAccordionGroup
+          multiple={true}
+          value={routine.machineSessions.map((_, idx) => `routine-${idx}`)}
+        >
           {routine.machineSessions.map((ms, idx) => {
             const machineTitle = machineNames[ms.machine_ref] || '(Loading...)';
 
-            // Show the exercise only if it's different from the machine's name
-            let exerciseToShow = '';
-            if (
+            const exerciseToShow =
               ms.exercise_name &&
               ms.exercise_name.trim() !== '' &&
               ms.exercise_name.trim() !== machineTitle.trim()
-            ) {
-              exerciseToShow = ms.exercise_name;
-            }
+                ? ms.exercise_name
+                : null;
 
             return (
-              <IonItem key={idx}>
-                <IonLabel>
-                  <h2>Machine: {machineTitle}</h2>
-                  {exerciseToShow && <p>Exercise: {exerciseToShow}</p>}
+              <IonAccordion key={idx} value={`routine-${idx}`}>
+                <IonItem slot="header" color="light">
+                  <IonLabel>
+                    <strong>Machine:</strong> {machineTitle}
+                    {exerciseToShow && ` - ${exerciseToShow}`}
+                  </IonLabel>
+                </IonItem>
 
+                <div className="ion-padding" slot="content">
                   {ms.sets.map((set, i) => (
-                    <div key={i}>
-                      Set {i + 1}: {set.reps} reps / {set.weight} kg
-                    </div>
+                    <IonItem key={i} lines="none">
+                      <IonLabel>
+                        Set {i + 1}: {set.reps} reps, {set.weight} kg
+                      </IonLabel>
+                    </IonItem>
                   ))}
-                </IonLabel>
-              </IonItem>
+                </div>
+              </IonAccordion>
             );
           })}
-        </IonList>
+        </IonAccordionGroup>
       </IonContent>
     </IonPage>
   );
