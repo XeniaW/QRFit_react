@@ -9,7 +9,7 @@ import {
   IonModal,
   IonTitle,
 } from '@ionic/react';
-import { getDoc } from 'firebase/firestore';
+import { getDoc, doc } from 'firebase/firestore';
 
 import './TrainingStart.css';
 import { Machines } from '../../../datamodels';
@@ -51,6 +51,8 @@ import {
   showWorkoutNotification,
   clearWorkoutNotification,
 } from '../../../services/BrowserNotificationService';
+
+import { firestore } from '../../../firebase';
 
 const StartTrainingSession: React.FC = () => {
   // -- Page Title --
@@ -105,14 +107,33 @@ const StartTrainingSession: React.FC = () => {
     localStorage.setItem('machineSessions', JSON.stringify(serialized));
   }, [machineSessions]);
 
-  // -- On mount: request notif perm & rehydrate running workout --
+  // -- On mount: request notif perm, rehydrate timer & machineSessions --
   useEffect(() => {
     requestNotificationPermission();
     const active = getActiveWorkout();
+
     if (sessionId && active && !isRunning) {
-      // resume timer + notification if we left off mid-workout
+      // 1) resume timer + notification
       startTimer();
       showWorkoutNotification(active.start);
+
+      // 2) rehydrate any existing machineSessions from localStorage
+      const stored = localStorage.getItem('machineSessions');
+      if (stored) {
+        try {
+          const parsed: any[] = JSON.parse(stored);
+          const reconstructed = parsed.map(s => {
+            return {
+              ...s,
+              // rebuild a Firestore DocumentReference for each machine_ref
+              machine_ref: doc(firestore, 'machines', s.machine_ref.id),
+            };
+          });
+          setMachineSessions(reconstructed);
+        } catch (err) {
+          console.error('Failed to parse stored machineSessions:', err);
+        }
+      }
     }
   }, []);
 
@@ -123,8 +144,8 @@ const StartTrainingSession: React.FC = () => {
       for (const sess of machineSessions) {
         const id = sess.machine_ref.id;
         if (!machineNames[id]) {
-          const doc = await getDoc(sess.machine_ref);
-          if (doc.exists()) newNames[id] = doc.data().title;
+          const docSnap = await getDoc(sess.machine_ref);
+          if (docSnap.exists()) newNames[id] = docSnap.data().title;
         }
       }
       if (Object.keys(newNames).length) {
