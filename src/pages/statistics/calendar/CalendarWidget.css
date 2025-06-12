@@ -15,7 +15,7 @@
   height: 3.5rem;
   font-size: 1rem;
   color: inherit;
-  position: relative;
+  position: relative; /* needed for our dot positioning */
 }
 
 .react-calendar__tile--active {
@@ -39,25 +39,109 @@
   color: #3880ff;
 }
 
-/* —— NEW THINNER, ROUNDER OUTLINES —— */
-.calendar-tile--note {
-  border: none !important;
-  outline: 1px solid gold !important;
-  outline-offset: -3px;
+/* ---- PHASE HIGHLIGHTS ---- */
+
+/* Menstruation (period) */
+.calendar-tile--menstruation {
+  background-color: #ffe5e5 !important;
+  color: #800000 !important;
+  border-radius: 6px;
+}
+
+/* Ovulation */
+.calendar-tile--ovulation {
+  background-color: #fff3cd !important;
+  color: #856404 !important;
+  border-radius: 6px;
+}
+
+/* Today outline */
+.calendar-tile--today {
+  border: 2px solid #3880ff !important;
   border-radius: 50% !important;
 }
 
-.calendar-tile--period {
-  border: none !important;
-  outline: 1px solid red !important;
-  outline-offset: -3px;
-  border-radius: 50% !important;
+/* ---- CUSTOM DOTS ---- */
+
+/* Center the dots inside each tile */
+.tile-dots {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
 }
 
-.calendar-tile--both {
+/* Workout dot (green) */
+.dot--workout {
+  width: 8px;
+  height: 8px;
+  background-color: green;
+  border-radius: 50%;
+}
+
+/* Note/log dot (grey) */
+.dot--note {
+  width: 8px;
+  height: 8px;
+  background-color: grey;
+  border-radius: 50%;
+}
+
+/* Current day: square with semi-transparent purple background */
+.calendar-tile--today {
+  background-color: rgba(139, 92, 246, 0.3) !important; /* #8b5cf6 @ 30% */
   border: none !important;
-  outline: 1px solid red !important;
-  outline-offset: -3px;
-  box-shadow: 0 0 0 1px gold !important;
-  border-radius: 50% !important;
+  border-radius: 6px !important; /* match the other tiles */
+}
+
+/* Legend container, reuse your existing sizing and font */
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.875rem;
+  margin-top: 1rem; /* space above calendar */
+}
+
+/* Each legend entry: dot or swatch + label */
+.calendar-legend .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Reuse your 8px dots */
+.dot--workout,
+.dot--note {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* Swatches for background phases (slightly bigger) */
+.calendar-legend .legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid #ccc;
+  display: inline-block;
+}
+
+/* Specific colors */
+.calendar-legend .dot--workout {
+  background-color: green;
+}
+.calendar-legend .dot--note {
+  background-color: grey;
+}
+.calendar-legend .legend-swatch--menstruation {
+  background-color: #ffe5e5;
+  border-color: #800000;
+}
+.calendar-legend .legend-swatch--ovulation {
+  background-color: #fff3cd;
+  border-color: #856404;
 }

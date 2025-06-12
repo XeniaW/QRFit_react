@@ -1,21 +1,17 @@
-// src/components/CalendarWidget.tsx
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  IonModal,
-  IonButton,
-  IonTextarea,
-  IonContent,
+  IonPage,
   IonHeader,
   IonToolbar,
   IonTitle,
-  IonFooter,
-  IonItem,
-  IonLabel,
-  IonPage,
-  IonCheckbox,
+  IonButtons,
+  IonButton,
+  IonContent,
+  IonIcon,
 } from '@ionic/react';
+import { settingsOutline } from 'ionicons/icons';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-import { useEffect, useState } from 'react';
 import {
   collection,
   doc,
@@ -27,9 +23,13 @@ import {
 import { auth, firestore } from '../../../firebase';
 import { CalendarLog, TrainingSessions } from '../../../datamodels';
 
+import CycleDayReview from './CycleDayReview';
+import CalendarLegend from './CalendarLegend';
+import LogModal from './LogModal';
+import SettingsModal from './SettingsModal';
 import './CalendarWidget.css';
 
-// Always format dates in the local timezone as YYYY-MM-DD
+// Format a Date to YYYY-MM-DD (for storage)
 const formatLocal = (date: Date) => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -37,224 +37,252 @@ const formatLocal = (date: Date) => {
   return `${y}-${m}-${d}`;
 };
 
+// Parse a “YYYY-MM-DD” string into a local‐time Date at midnight
+const parseLocalDate = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+// Four‐phase logic
+const getPhaseForDay = (
+  day: number,
+  cycleLength: number,
+  periodLength: number
+): 'menstruation' | 'follicular' | 'ovulation' | 'luteal' | null => {
+  const ovulationDay = cycleLength - 14;
+  if (day >= 1 && day <= periodLength) return 'menstruation';
+  if (day > periodLength && day < ovulationDay) return 'follicular';
+  if (day === ovulationDay) return 'ovulation';
+  if (day > ovulationDay && day <= cycleLength) return 'luteal';
+  return null;
+};
+
 const CalendarWidget: React.FC = () => {
+  // Data
   const [logs, setLogs] = useState<CalendarLog[]>([]);
   const [workoutDates, setWorkoutDates] = useState<Set<string>>(new Set());
+
+  // Log modal
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [mood, setMood] = useState<'good' | 'neutral' | 'bad' | undefined>(
-    undefined
-  );
+  const [mood, setMood] = useState<'good' | 'neutral' | 'bad'>();
   const [note, setNote] = useState('');
   const [onPeriod, setOnPeriod] = useState(false);
-  const [showModal, setShowModal] = useState(false);
+  const [showLogModal, setShowLogModal] = useState(false);
+
+  // Settings modal
+  const [cycleLength, setCycleLength] = useState(28);
+  const [periodLength, setPeriodLength] = useState(4);
+  const [showSettings, setShowSettings] = useState(false);
 
   const userId = auth.currentUser?.uid;
+  const msPerDay = 1000 * 60 * 60 * 24;
 
+  // Fetch logs + workouts
   useEffect(() => {
     if (!userId) return;
-    fetchCalendarLogs();
-    fetchWorkoutDates();
+    (async () => {
+      const logSnap = await getDocs(
+        query(
+          collection(firestore, 'calendar_logs'),
+          where('user_id', '==', userId)
+        )
+      );
+      setLogs(logSnap.docs.map(d => d.data() as CalendarLog));
+
+      const sessionSnap = await getDocs(
+        query(
+          collection(firestore, 'training_sessions'),
+          where('user_id', '==', userId)
+        )
+      );
+      const dates = new Set<string>();
+      sessionSnap.forEach(ds => {
+        const data = ds.data() as TrainingSessions;
+        if (data.start_date) {
+          const { seconds, nanoseconds = 0 } = data.start_date as any;
+          const dt = new Date(seconds * 1000 + nanoseconds / 1e6);
+          dates.add(formatLocal(dt));
+        }
+      });
+      setWorkoutDates(dates);
+    })();
   }, [userId]);
 
-  const fetchCalendarLogs = async () => {
-    const logsQuery = query(
-      collection(firestore, 'calendar_logs'),
-      where('user_id', '==', userId)
-    );
-    const snapshot = await getDocs(logsQuery);
-    const data = snapshot.docs.map(doc => doc.data() as CalendarLog);
-    setLogs(data);
+  // Compute exact period days for each tick
+  const periodDays = useMemo<Set<string>>(() => {
+    const days = new Set<string>();
+    logs
+      .filter(l => l.on_period)
+      .forEach(l => {
+        const start = parseLocalDate(l.date).getTime();
+        for (let i = 0; i < periodLength; i++) {
+          days.add(formatLocal(new Date(start + i * msPerDay)));
+        }
+      });
+    return days;
+  }, [logs, periodLength]);
+
+  // Helper: most recent period start on or before date
+  const getRecentPeriodStartBefore = (date: Date): Date | null => {
+    const valid = logs
+      .filter(l => l.on_period)
+      .map(l => parseLocalDate(l.date))
+      .filter(d => d.getTime() <= date.getTime());
+    if (!valid.length) return null;
+    return new Date(Math.max(...valid.map(d => d.getTime())));
   };
 
-  const fetchWorkoutDates = async () => {
-    const sessionsQuery = query(
-      collection(firestore, 'training_sessions'),
-      where('user_id', '==', userId)
-    );
-    const snapshot = await getDocs(sessionsQuery);
+  // CycleDayReview values
+  const today = new Date();
+  const lastStart = getRecentPeriodStartBefore(today) ?? today;
+  const currentDay =
+    Math.floor((today.getTime() - lastStart.getTime()) / msPerDay) + 1;
+  const nextPeriodInDays = cycleLength - currentDay + 1;
+  const lpStart = lastStart;
+  const lpEnd = new Date(lpStart.getTime() + (periodLength - 1) * msPerDay);
+  const lastPeriod = `${lpStart.toLocaleString('default', {
+    month: 'short',
+  })} ${lpStart.getDate()} – ${lpEnd.getDate()}`;
+  const currentPhase =
+    getPhaseForDay(currentDay, cycleLength, periodLength) ?? 'follicular';
 
-    const dates = new Set<string>();
-    snapshot.forEach(docSnap => {
-      const data = docSnap.data() as TrainingSessions;
-      if (data.start_date) {
-        const { seconds, nanoseconds = 0 } = data.start_date as {
-          seconds: number;
-          nanoseconds?: number;
-        };
-        const dateObj = new Date(seconds * 1000 + nanoseconds / 1e6);
-        const localStr = formatLocal(dateObj);
-        dates.add(localStr);
-      }
-    });
-
-    setWorkoutDates(dates);
-  };
-
+  // Open log modal
   const openDay = (date: Date) => {
     setSelectedDate(date);
-    const existingEntry = logs.find(entry => entry.date === formatLocal(date));
-    if (existingEntry) {
-      setMood(existingEntry.mood);
-      setNote(existingEntry.note || '');
-      setOnPeriod(existingEntry.on_period || false);
+    const ds = formatLocal(date);
+    const existing = logs.find(l => l.date === ds);
+    if (existing) {
+      setMood(existing.mood);
+      setNote(existing.note || '');
+      setOnPeriod(existing.on_period || false);
     } else {
       setMood(undefined);
       setNote('');
       setOnPeriod(false);
     }
-    setShowModal(true);
+    setShowLogModal(true);
   };
 
-  const existingLog = selectedDate
-    ? logs.find(entry => entry.date === formatLocal(selectedDate))
-    : undefined;
-
+  // Save log
   const saveLog = async () => {
     if (!userId || !selectedDate) return;
-
-    const dateStr = formatLocal(selectedDate);
+    const ds = formatLocal(selectedDate);
     const newLog: CalendarLog = {
       user_id: userId,
-      date: dateStr,
+      date: ds,
       ...(mood && { mood }),
       ...(note.trim() && { note: note.trim() }),
       ...(onPeriod && { on_period: true }),
     };
-
-    await setDoc(
-      doc(firestore, 'calendar_logs', `${userId}_${dateStr}`),
-      newLog
+    await setDoc(doc(firestore, 'calendar_logs', `${userId}_${ds}`), newLog);
+    // reload
+    const snap = await getDocs(
+      query(
+        collection(firestore, 'calendar_logs'),
+        where('user_id', '==', userId)
+      )
     );
-    await fetchCalendarLogs();
-    setShowModal(false);
+    setLogs(snap.docs.map(d => d.data() as CalendarLog));
+    setShowLogModal(false);
   };
 
+  // Tile CSS classes
   const getTileClass = (date: Date) => {
-    const dateStr = formatLocal(date);
-    const log = logs.find(l => l.date === dateStr);
-    const hasNote = !!log?.note;
-    const isOnPeriod = !!log?.on_period;
+    const classes: string[] = [];
+    const ds = formatLocal(date);
 
-    if (hasNote && isOnPeriod) return 'calendar-tile--both';
-    if (isOnPeriod) return 'calendar-tile--period';
-    if (hasNote) return 'calendar-tile--note';
-    return null;
+    if (periodDays.has(ds)) {
+      classes.push('calendar-tile--menstruation');
+    } else {
+      const start = getRecentPeriodStartBefore(date);
+      if (start) {
+        const diff =
+          Math.floor((date.getTime() - start.getTime()) / msPerDay) + 1;
+        const phase = getPhaseForDay(diff, cycleLength, periodLength);
+        if (phase === 'ovulation') {
+          classes.push('calendar-tile--ovulation');
+        }
+      }
+    }
+
+    if (ds === formatLocal(new Date())) {
+      classes.push('calendar-tile--today');
+    }
+    return classes;
   };
 
-  const renderTile = ({ date }: { date: Date }) => {
-    const localStr = formatLocal(date);
-    const isWorkout = workoutDates.has(localStr);
-
+  // Tile content dots
+  const renderTileContent = ({ date }: { date: Date }) => {
+    const ds = formatLocal(date);
+    const hasWorkout = workoutDates.has(ds);
+    const hasLog = logs.some(l => l.date === ds);
     return (
-      <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        {isWorkout && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 4,
-              right: 4,
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              backgroundColor: 'green',
-            }}
-          />
-        )}
+      <div className="tile-dots">
+        {hasWorkout && <span className="dot--workout" />}
+        {hasLog && <span className="dot--note" />}
       </div>
     );
   };
+
+  const existingLog = selectedDate
+    ? logs.find(l => l.date === formatLocal(selectedDate))
+    : undefined;
 
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Mood Calendar</IonTitle>
+          <IonTitle>Mood & Cycle Calendar</IonTitle>
+          <IonButtons slot="end">
+            <IonButton onClick={() => setShowSettings(true)}>
+              <IonIcon icon={settingsOutline} />
+            </IonButton>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
 
       <IonContent className="ion-padding">
+        <CycleDayReview
+          currentDay={currentDay}
+          cycleLength={cycleLength}
+          periodLength={periodLength}
+          lastPeriod={lastPeriod}
+          nextPeriodInDays={nextPeriodInDays}
+          currentPhase={currentPhase}
+          onLogToday={() => openDay(new Date())}
+        />
+
         <Calendar
           onClickDay={openDay}
           tileClassName={({ date }) => getTileClass(date)}
-          tileContent={renderTile}
+          tileContent={renderTileContent}
         />
+
+        <CalendarLegend />
       </IonContent>
 
-      <IonModal isOpen={showModal} onDidDismiss={() => setShowModal(false)}>
-        <IonHeader>
-          <IonToolbar>
-            <IonTitle>
-              Log for {selectedDate && formatLocal(selectedDate)}
-            </IonTitle>
-          </IonToolbar>
-        </IonHeader>
+      <LogModal
+        isOpen={showLogModal}
+        onDismiss={() => setShowLogModal(false)}
+        dateStr={selectedDate ? formatLocal(selectedDate) : ''}
+        mood={mood}
+        setMood={setMood}
+        note={note}
+        setNote={setNote}
+        onPeriod={onPeriod}
+        setOnPeriod={setOnPeriod}
+        saveLog={saveLog}
+        existingLog={existingLog}
+      />
 
-        <IonContent className="ion-padding">
-          <IonItem>
-            <IonLabel>Mood</IonLabel>
-          </IonItem>
-          <IonItem>
-            <IonButton
-              expand="block"
-              fill={mood === 'good' ? 'solid' : 'outline'}
-              onClick={() => setMood('good')}
-            >
-              😊 Good
-            </IonButton>
-            <IonButton
-              expand="block"
-              fill={mood === 'neutral' ? 'solid' : 'outline'}
-              onClick={() => setMood('neutral')}
-            >
-              😐 Neutral
-            </IonButton>
-            <IonButton
-              expand="block"
-              fill={mood === 'bad' ? 'solid' : 'outline'}
-              onClick={() => setMood('bad')}
-            >
-              ☹️ Bad
-            </IonButton>
-          </IonItem>
-
-          <IonItem>
-            <IonLabel position="stacked">Note (optional)</IonLabel>
-            <IonTextarea
-              value={note}
-              onIonChange={e => setNote(e.detail.value!)}
-              rows={4}
-            />
-          </IonItem>
-
-          <IonItem>
-            <IonLabel>Currently on period</IonLabel>
-            <IonCheckbox
-              checked={onPeriod}
-              onIonChange={e => setOnPeriod(e.detail.checked)}
-              slot="end"
-            />
-          </IonItem>
-        </IonContent>
-
-        <IonFooter>
-          <IonToolbar>
-            <IonButton
-              expand="block"
-              color="medium"
-              onClick={() => setShowModal(false)}
-            >
-              Cancel
-            </IonButton>
-            <IonButton
-              expand="block"
-              onClick={saveLog}
-              disabled={!mood && !note.trim() && !onPeriod && !existingLog}
-            >
-              Save Log
-            </IonButton>
-          </IonToolbar>
-        </IonFooter>
-      </IonModal>
+      <SettingsModal
+        isOpen={showSettings}
+        onDismiss={() => setShowSettings(false)}
+        cycleLength={cycleLength}
+        periodLength={periodLength}
+        setCycleLength={setCycleLength}
+        setPeriodLength={setPeriodLength}
+      />
     </IonPage>
   );
 };
