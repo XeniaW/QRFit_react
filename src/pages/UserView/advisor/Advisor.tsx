@@ -10,15 +10,9 @@ import {
 } from '@ionic/react';
 
 import './Advisor.css';
-import { usePageTitle } from '../../../contexts/usePageTitle';
 import { useEffect } from 'react';
 
 const Advisor: React.FC = () => {
-  const { setTitle } = usePageTitle();
-
-  useEffect(() => {
-    setTitle('Advisor'); // Set title dynamically
-  }, []);
   return (
     <IonPage>
       <IonContent fullscreen>

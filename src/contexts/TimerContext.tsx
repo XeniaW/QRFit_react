@@ -14,7 +14,9 @@ type TimerContextType = {
   resetTimer: () => void;
 };
 
-const TimerContext = createContext<TimerContextType | undefined>(undefined);
+export const TimerContext = createContext<TimerContextType | undefined>(
+  undefined
+);
 
 export const TimerProvider: React.FC<{ children: ReactNode }> = ({
   children,

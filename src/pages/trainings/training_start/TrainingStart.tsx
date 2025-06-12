@@ -15,7 +15,6 @@ import './TrainingStart.css';
 import { Machines } from '../../../datamodels';
 import { useAuth } from '../../../auth';
 import { useTimer } from '../../../contexts/TimerContext';
-import { usePageTitle } from '../../../contexts/usePageTitle';
 
 import {
   startSession,
@@ -55,12 +54,6 @@ import {
 import { firestore } from '../../../firebase';
 
 const StartTrainingSession: React.FC = () => {
-  // -- Page Title --
-  const { setTitle } = usePageTitle();
-  useEffect(() => {
-    setTitle('Start Training');
-  }, [setTitle]);
-
   // -- Timer --
   const { isRunning, startTimer, stopTimer, resetTimer } = useTimer();
 

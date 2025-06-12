@@ -8,18 +8,10 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/react';
-import { useParams } from 'react-router';
+
 import './Statistics.css';
-import { usePageTitle } from '../../../contexts/usePageTitle';
-import { useEffect } from 'react';
 
 const Statistics: React.FC = () => {
-  const { setTitle } = usePageTitle();
-
-  useEffect(() => {
-    setTitle('Statistics'); // Set title dynamically
-  }, []);
-
   return (
     <IonPage>
       <IonContent fullscreen>

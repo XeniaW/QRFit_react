@@ -9,15 +9,8 @@ import {
   IonToolbar,
 } from '@ionic/react';
 import './Home.css';
-import { usePageTitle } from '../../contexts/usePageTitle';
-import { useEffect } from 'react';
 
 const Home: React.FC = () => {
-  const { setTitle } = usePageTitle();
-
-  useEffect(() => {
-    setTitle('Home Page'); // Set title when component mounts
-  }, []);
   return (
     <IonPage>
       <IonContent fullscreen>

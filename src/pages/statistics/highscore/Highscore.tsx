@@ -21,7 +21,7 @@ import {
   getDoc,
 } from 'firebase/firestore';
 import { auth, firestore } from '../../../firebase';
-import { usePageTitle } from '../../../contexts/usePageTitle';
+
 import {
   formatDurationWithSeconds,
   formatDate,
@@ -38,7 +38,6 @@ import 'swiper/css/effect-creative';
 import './Highscore.css';
 
 const Highscore: React.FC = () => {
-  const { setTitle } = usePageTitle();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     workoutsCompleted: 0,
@@ -53,11 +52,6 @@ const Highscore: React.FC = () => {
     exercisesPerWorkout: 0,
     firstTrainingDate: '',
   });
-
-  useEffect(() => {
-    setTitle('Your Score');
-    fetchStatistics();
-  }, []);
 
   const fetchStatistics = async () => {
     try {

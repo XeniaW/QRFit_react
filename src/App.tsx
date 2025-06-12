@@ -30,7 +30,6 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
 
 import { TimerProvider } from './contexts/TimerContext'; // Import Timer Provider
-import { PageTitleProvider } from './contexts/usePageTitle';
 
 setupIonicReact();
 
@@ -84,19 +83,17 @@ const App: React.FC = () => {
           }}
         >
           <IonReactRouter>
-            <PageTitleProvider>
-              {' '}
-              {/* Move PageTitleProvider inside IonReactRouter */}
-              <GlobalTimerHeader /> {/* Now correctly updates the title */}
-              <Switch>
-                <Route exact path="/" component={Home} />
-                <Route exact path="/modell" component={ModelPage} />
-                <Route exact path="/login" component={Login} />
-                <Route exact path="/registration" component={Registration} />
-                <Route path="/my" component={AppTabs} />
-                <Redirect exact path="/" to="/my/training" />
-              </Switch>
-            </PageTitleProvider>
+            {' '}
+            {/* Move PageTitleProvider inside IonReactRouter */}
+            <GlobalTimerHeader /> {/* Now correctly updates the title */}
+            <Switch>
+              <Route exact path="/" component={Home} />
+              <Route exact path="/modell" component={ModelPage} />
+              <Route exact path="/login" component={Login} />
+              <Route exact path="/registration" component={Registration} />
+              <Route path="/my" component={AppTabs} />
+              <Redirect exact path="/" to="/my/training" />
+            </Switch>
           </IonReactRouter>
         </AuthContext.Provider>
       </TimerProvider>

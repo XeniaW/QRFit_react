@@ -8,17 +8,16 @@ import {
   IonIcon,
 } from '@ionic/react';
 import { useTimer } from '../../contexts/TimerContext';
-import { usePageTitle } from '../../contexts/usePageTitle';
+
 import { star } from 'ionicons/icons';
 
 const GlobalTimerHeader: React.FC = () => {
   const { isRunning } = useTimer();
-  const { title } = usePageTitle(); // Get dynamic title
+  if (!isRunning) return null;
 
   return (
     <IonHeader>
       <IonToolbar>
-        <IonTitle>{title}</IonTitle> {/* Dynamic Title from Hook */}
         {isRunning && (
           <IonButtons slot="end">
             <IonButton

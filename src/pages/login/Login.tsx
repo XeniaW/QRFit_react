@@ -3,12 +3,7 @@ import {
   IonCol,
   IonContent,
   IonButton,
-  IonButtons,
-  IonBackButton,
-  IonHeader,
   IonPage,
-  IonTitle,
-  IonToolbar,
   IonInput,
   IonText,
   IonLoading,
@@ -19,15 +14,8 @@ import './Login.css';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { useAuth } from '../../auth';
-import { cpuUsage } from 'process';
-import { usePageTitle } from '../../contexts/usePageTitle';
 
 const Login: React.FC = () => {
-  const { setTitle } = usePageTitle();
-
-  useEffect(() => {
-    setTitle('Login Page'); // Set title dynamically
-  }, []);
   const { loggedIn } = useAuth();
   const [LoginEmail, setLoginEmail] = useState<any | null>('');
   const [LoginPassword, setLoginPassword] = useState<any | null>('');

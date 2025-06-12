@@ -9,19 +9,12 @@ import {
   IonToolbar,
 } from '@ionic/react';
 import { Redirect } from 'react-router';
-import { usePageTitle } from '../../../contexts/usePageTitle';
-import { useEffect } from 'react';
+
 import './Settings.css';
 
 import { auth } from '../../../firebase';
 
 const Settings: React.FC = () => {
-  const { setTitle } = usePageTitle();
-
-  useEffect(() => {
-    setTitle('Settings'); // Set title dynamically
-  }, []);
-
   const RedirectToHome = () => {
     auth.signOut();
     <Redirect to="/sign-in" />;
