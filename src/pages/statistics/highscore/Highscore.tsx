@@ -1,17 +1,14 @@
+import React, { useState, useEffect } from 'react';
 import {
   IonPage,
   IonHeader,
   IonToolbar,
+  IonButtons,
+  IonBackButton,
   IonTitle,
   IonContent,
-  IonButton,
   IonSpinner,
-  IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCardContent,
 } from '@ionic/react';
-import { useState, useEffect } from 'react';
 import {
   collection,
   query,
@@ -21,13 +18,12 @@ import {
   getDoc,
 } from 'firebase/firestore';
 import { auth, firestore } from '../../../firebase';
-
 import {
   formatDurationWithSeconds,
   formatDate,
   calculateLongestStreak,
 } from '../../../utils/timeUtils';
-
+import StatsOverview, { StatItem } from './StatsOverview';
 import './Highscore.css';
 
 const Highscore: React.FC = () => {
@@ -46,7 +42,6 @@ const Highscore: React.FC = () => {
     firstTrainingDate: '',
   });
 
-  // helper to get ISO week number
   const getWeekNumber = (date: Date) => {
     const firstDay = new Date(date.getFullYear(), 0, 1);
     const pastDays = (date.getTime() - firstDay.getTime()) / 86400000;
@@ -59,12 +54,11 @@ const Highscore: React.FC = () => {
         const userId = auth.currentUser?.uid;
         if (!userId) return;
 
-        // 1) training_sessions
+        // training_sessions
         const tsRef = collection(firestore, 'training_sessions');
         const tsSnap = await getDocs(
           query(tsRef, where('user_id', '==', userId))
         );
-
         let totalDuration = 0,
           longestDuration = 0,
           totalExercises = 0;
@@ -78,7 +72,7 @@ const Highscore: React.FC = () => {
           if (start == null || end == null) return;
           const dur = end - start;
           totalDuration += dur;
-          if (dur > longestDuration) longestDuration = dur;
+          longestDuration = Math.max(longestDuration, dur);
           sessionDates.push(start);
           firstTrainingTs = Math.min(firstTrainingTs, start);
           if (d.machine_sessions) totalExercises += d.machine_sessions.length;
@@ -95,7 +89,7 @@ const Highscore: React.FC = () => {
           Object.values(weeksMap).reduce((a, b) => a + b, 0) /
           (Object.keys(weeksMap).length || 1);
 
-        // 2) machine_sessions
+        // machine_sessions
         const msRef = collection(firestore, 'machine_sessions');
         const msSnap = await getDocs(
           query(msRef, where('user_id', '==', userId))
@@ -108,13 +102,12 @@ const Highscore: React.FC = () => {
           const d = ds.data();
           const mid = d.machine_ref.id;
           usage[mid] = (usage[mid] || 0) + 1;
-          if (d.sets)
-            d.sets.forEach((s: any) => {
-              if (s.weight > highestWeight) {
-                highestWeight = s.weight;
-                highestWeightMachineId = mid;
-              }
-            });
+          d.sets?.forEach((s: any) => {
+            if (s.weight > highestWeight) {
+              highestWeight = s.weight;
+              highestWeightMachineId = mid;
+            }
+          });
         });
 
         // favorite machine name
@@ -147,9 +140,11 @@ const Highscore: React.FC = () => {
           favoriteMachine,
           highestWeight,
           highestWeightMachine,
-          trainingFrequencyPerWeek: freqPerWeek,
+          trainingFrequencyPerWeek: parseFloat(freqPerWeek.toFixed(1)),
           longestStreakDays: longestStreak,
-          exercisesPerWorkout: tsSnap.size ? totalExercises / tsSnap.size : 0,
+          exercisesPerWorkout: parseFloat(
+            (tsSnap.size ? totalExercises / tsSnap.size : 0).toFixed(1)
+          ),
           firstTrainingDate: firstTrainingTs ? formatDate(firstTrainingTs) : '',
         });
       } catch (err) {
@@ -167,7 +162,10 @@ const Highscore: React.FC = () => {
       <IonPage>
         <IonHeader>
           <IonToolbar>
-            <IonTitle>Your Score</IonTitle>
+            <IonButtons slot="start">
+              <IonBackButton defaultHref="/my/statistics" />
+            </IonButtons>
+            <IonTitle>Statistics</IonTitle>
           </IonToolbar>
         </IonHeader>
         <IonContent fullscreen>
@@ -177,8 +175,7 @@ const Highscore: React.FC = () => {
     );
   }
 
-  // build a simple list of stats
-  const items = [
+  const items: StatItem[] = [
     { title: '🏆 Workouts Completed', value: stats.workoutsCompleted },
     {
       title: '⏱️ Total Training Time',
@@ -194,11 +191,11 @@ const Highscore: React.FC = () => {
     },
     {
       title: '📅 Training Frequency (per week)',
-      value: stats.trainingFrequencyPerWeek.toFixed(2),
+      value: Math.round(stats.trainingFrequencyPerWeek),
     },
     {
       title: '🏋️‍♂️ Exercises per Workout (avg)',
-      value: stats.exercisesPerWorkout.toFixed(2),
+      value: Math.round(stats.exercisesPerWorkout),
     },
     {
       title: '📅 First Training Session',
@@ -210,21 +207,15 @@ const Highscore: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Your Score</IonTitle>
+          <IonButtons slot="start">
+            <IonBackButton defaultHref="/my/statistics" />
+          </IonButtons>
+          <IonTitle>Statistics</IonTitle>
         </IonToolbar>
       </IonHeader>
-      <IonContent fullscreen style={{ padding: '16px' }}>
-        {items.map((item, idx) => (
-          <IonCard key={idx} style={{ marginBottom: '12px' }}>
-            <IonCardHeader>
-              <IonCardTitle>{item.title}</IonCardTitle>
-            </IonCardHeader>
-            <IonCardContent>{item.value}</IonCardContent>
-          </IonCard>
-        ))}
-        <IonButton expand="full" color="primary" routerLink="/my/statistics">
-          Back to Statistics
-        </IonButton>
+
+      <IonContent fullscreen>
+        <StatsOverview items={items} />
       </IonContent>
     </IonPage>
   );

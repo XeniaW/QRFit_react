@@ -1,0 +1,36 @@
+.stats-snap-container {
+  display: flex;
+  overflow-x: scroll; /* always show the horizontal scrollbar */
+  overflow-y: hidden; /* prevent vertical scroll */
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  gap: 12px;
+  padding: 12px;
+}
+
+/* Optional: make the track/thumb a bit more visible */
+.stats-snap-container::-webkit-scrollbar {
+  height: 8px; /* set scrollbar thickness */
+}
+
+.stats-snap-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.stats-snap-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+/* Remove any hiding rules */
+.stats-snap-container {
+  -ms-overflow-style: auto; /* IE/Edge */
+  scrollbar-width: auto; /* Firefox */
+}
+
+/* each stat “card” */
+.stats-card {
+  flex: 0 0 30%; /* three cards per viewport */
+  scroll-snap-align: start;
+  min-width: 0; /* don’t allow flex items to overflow */
+}
