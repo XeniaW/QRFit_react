@@ -12,6 +12,7 @@ import {
   IonCardSubtitle,
   IonCardContent,
   IonButton,
+  IonText,
 } from '@ionic/react';
 import './MachineItem.css';
 import { firestore, auth } from '../../../firebase';
@@ -121,8 +122,23 @@ const MachineItem: React.FC = () => {
                 {showChart[i] ? 'Hide Statistics' : 'Show Statistics'}
               </IonButton>
 
-              {showChart[i] && chartData[i] && (
-                <MachineExerciseChart data={chartData[i]} />
+              {showChart[i] && (
+                <>
+                  {chartData[i]?.length ? (
+                    <MachineExerciseChart data={chartData[i]} />
+                  ) : (
+                    <IonText
+                      color="medium"
+                      style={{
+                        display: 'block',
+                        marginTop: '2em',
+                        textAlign: 'center',
+                      }}
+                    >
+                      No data yet
+                    </IonText>
+                  )}
+                </>
               )}
             </IonCardContent>
           </IonCard>
