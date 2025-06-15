@@ -5,12 +5,12 @@ import {
   IonItem,
   IonIcon,
   IonLabel,
-  IonInput,
 } from '@ionic/react';
-import { trash, add, remove } from 'ionicons/icons';
+import { trash, add } from 'ionicons/icons';
 
 import { MachineSession } from '../../../datamodels';
 import { deleteMachineSession as deleteSessionService } from '../../../services/TrainingSessionService';
+import SetRow from './SetRow';
 
 interface MachineSessionsAccordionProps {
   machineSessions: MachineSession[];
@@ -33,48 +33,37 @@ const MachineSessionsAccordion: React.FC<MachineSessionsAccordionProps> = ({
   deleteMachineSession,
   setMachineSessions,
 }) => {
-  const handleInputChange = (
-    sessionIndex: number,
-    setIndex: number,
-    field: 'reps' | 'weight',
-    value: string
-  ) => {
-    const numericValue = parseInt(value, 10);
-    if (isNaN(numericValue)) return;
-
+  const commitReps = (si: number, ui: number, val: number) => {
     setMachineSessions(prev => {
-      const updated = [...prev];
-      const updatedSets = [...updated[sessionIndex].sets];
-      updatedSets[setIndex] = {
-        ...updatedSets[setIndex],
-        [field]: numericValue,
-      };
-      updated[sessionIndex] = {
-        ...updated[sessionIndex],
-        sets: updatedSets,
-      };
-      return updated;
+      const next = [...prev];
+      next[si].sets[ui].reps = val;
+      return next;
+    });
+  };
+
+  const commitWeight = (si: number, ui: number, val: number) => {
+    setMachineSessions(prev => {
+      const next = [...prev];
+      next[si].sets[ui].weight = val;
+      return next;
     });
   };
 
   return (
     <IonAccordionGroup>
-      {machineSessions.map((session, sessionIndex) => {
-        const machineId = session.machine_ref.id;
-        const machineTitle = machineNames[machineId] || 'Loading...';
-        const exerciseName = session.exercise_name;
-
-        const showExerciseName =
-          exerciseName && exerciseName !== machineTitle
-            ? ` - ${exerciseName}`
+      {machineSessions.map((session, si) => {
+        const title = machineNames[session.machine_ref.id] || 'Loading...';
+        const extra =
+          session.exercise_name && session.exercise_name !== title
+            ? ` – ${session.exercise_name}`
             : '';
 
         return (
           <IonAccordion key={session.id} value={session.id}>
             <IonItem slot="header" color="light">
               <IonLabel>
-                <strong>Machine:</strong> {machineTitle}
-                {showExerciseName}
+                <strong>Machine:</strong> {title}
+                {extra}
               </IonLabel>
               <IonIcon
                 icon={trash}
@@ -89,66 +78,40 @@ const MachineSessionsAccordion: React.FC<MachineSessionsAccordionProps> = ({
                 }
               />
             </IonItem>
+
             <div className="ion-padding" slot="content">
               <IonItem lines="none">
                 <IonLabel
                   slot="start"
-                  style={{ fontSize: '0.75rem', fontWeight: 'bold' }}
+                  style={{ fontSize: '.75rem', fontWeight: 'bold' }}
                 >
                   Set
                 </IonLabel>
-                <IonLabel style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>
+                <IonLabel style={{ fontSize: '.75rem', fontWeight: 'bold' }}>
                   Reps
                 </IonLabel>
-                <IonLabel style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>
+                <IonLabel style={{ fontSize: '.75rem', fontWeight: 'bold' }}>
                   Weight
                 </IonLabel>
-                <IonLabel
-                  style={{ fontSize: '0.75rem', fontWeight: 'bold' }}
-                ></IonLabel>
               </IonItem>
-              {session.sets.map((set, setIndex) => (
-                <IonItem key={set.set_number}>
-                  <IonLabel slot="start">{set.set_number}:</IonLabel>
-                  <IonInput
-                    value={set.reps}
-                    type="number"
-                    placeholder="Reps"
-                    onIonInput={e =>
-                      handleInputChange(
-                        sessionIndex,
-                        setIndex,
-                        'reps',
-                        (e.detail.value ?? '').toString()
-                      )
-                    }
-                  />
-                  <IonInput
-                    value={set.weight}
-                    type="number"
-                    placeholder="Weight (kg)"
-                    onIonInput={e =>
-                      handleInputChange(
-                        sessionIndex,
-                        setIndex,
-                        'weight',
-                        (e.detail.value ?? '').toString()
-                      )
-                    }
-                  />
 
-                  <IonIcon
-                    icon={remove}
-                    slot="end"
-                    onClick={() => handleRemoveSet(sessionIndex, setIndex)}
-                  />
-                </IonItem>
+              {session.sets.map((set, ui) => (
+                <SetRow
+                  key={set.set_number}
+                  sessionIndex={si}
+                  setIndex={ui}
+                  reps={set.reps}
+                  weight={set.weight}
+                  onRepsCommit={commitReps}
+                  onWeightCommit={commitWeight}
+                  handleRemoveSet={handleRemoveSet}
+                />
               ))}
 
               <IonItem
                 button
                 onClick={() => {
-                  setSelectedSessionIndex(sessionIndex);
+                  setSelectedSessionIndex(si);
                   setShowTextModal(true);
                 }}
               >

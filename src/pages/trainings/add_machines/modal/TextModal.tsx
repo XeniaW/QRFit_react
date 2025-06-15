@@ -16,11 +16,14 @@ interface TextModalProps {
   onCancel: () => void;
 }
 
-const TextModal: React.FC<TextModalProps> = ({ isOpen, onConfirm, onCancel }) => {
-  const [reps, setReps] = useState<string>(''); // Use string to directly bind with IonInput
-  const [weight, setWeight] = useState<string>(''); // Use string to directly bind with IonInput
+const TextModal: React.FC<TextModalProps> = ({
+  isOpen,
+  onConfirm,
+  onCancel,
+}) => {
+  const [reps, setReps] = useState<string>('');
+  const [weight, setWeight] = useState<string>('');
 
-  // Reset values when modal opens
   useEffect(() => {
     if (isOpen) {
       setReps('');
@@ -28,15 +31,18 @@ const TextModal: React.FC<TextModalProps> = ({ isOpen, onConfirm, onCancel }) =>
     }
   }, [isOpen]);
 
-  const handleConfirm = () => {
-    const parsedReps = parseInt(reps, 10);
-    const parsedWeight = parseInt(weight, 10);
+  // only used to enable/disable Confirm
+  const isRepsValid = () => /^[1-9]\d*$/.test(reps);
+  const isWeightValid = () => {
+    const norm = weight.replace(',', '.');
+    return /^\d+(\.\d+)?$/.test(norm) && parseFloat(norm) > 0;
+  };
 
-    if (!isNaN(parsedReps) && !isNaN(parsedWeight)) {
-      onConfirm(parsedReps, parsedWeight);
-      setReps('');
-      setWeight('');
-    }
+  const handleConfirm = () => {
+    if (!isRepsValid() || !isWeightValid()) return;
+    onConfirm(parseInt(reps, 10), parseFloat(weight.replace(',', '.')));
+    setReps('');
+    setWeight('');
   };
 
   return (
@@ -47,23 +53,27 @@ const TextModal: React.FC<TextModalProps> = ({ isOpen, onConfirm, onCancel }) =>
         </IonToolbar>
       </IonHeader>
       <IonContent>
-        <div style={{ padding: '16px' }}>
+        <div style={{ padding: 16 }}>
           <IonInput
-            type="number"
             placeholder="Reps"
             value={reps}
-            onIonInput={(e) => setReps(e.detail.value!)} // Properly update state
+            inputMode="numeric"
+            onIonInput={e => setReps(e.detail.value ?? '')}
           />
           <IonInput
-            type="number"
             placeholder="Weight (kg)"
             value={weight}
-            onIonInput={(e) => setWeight(e.detail.value!)} // Properly update state
+            inputMode="decimal"
+            onIonInput={e => setWeight(e.detail.value ?? '')}
           />
         </div>
       </IonContent>
       <IonFooter>
-        <IonButton expand="block" onClick={handleConfirm}>
+        <IonButton
+          expand="block"
+          onClick={handleConfirm}
+          disabled={!isRepsValid() || !isWeightValid()}
+        >
           Confirm
         </IonButton>
         <IonButton expand="block" color="light" onClick={onCancel}>
