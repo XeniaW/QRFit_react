@@ -71,6 +71,7 @@ const ModelPage: React.FC = () => {
             style={{ width: '100%', height: '100%' }}
             camera={{ position: [0, 1, 5], fov: 50, near: 0.1, far: 1000 }}
           >
+            <color attach="background" args={['#888888']} />
             <Suspense
               fallback={
                 <mesh>

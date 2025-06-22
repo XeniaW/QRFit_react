@@ -1,84 +1,105 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { MUSCLE_AREAS } from '../../../data/muscles';
 
-const ClickDetector: React.FC<{
+interface ClickDetectorProps {
   model: THREE.Object3D;
   setModalData: React.Dispatch<
     React.SetStateAction<{ muscle: string; isOpen: boolean }>
   >;
-}> = ({ model, setModalData }) => {
-  const { camera, gl, scene } = useThree();
-  const raycaster = new THREE.Raycaster();
-  const mouse = new THREE.Vector2();
-  const [highlight, setHighlight] = useState<THREE.Mesh | null>(null);
+}
 
-  const handleClick = (event: MouseEvent) => {
+const ClickDetector: React.FC<ClickDetectorProps> = ({
+  model,
+  setModalData,
+}) => {
+  const { camera, gl } = useThree();
+  const raycaster = useRef(new THREE.Raycaster());
+  const mouse = useRef(new THREE.Vector2());
+
+  // track last highlighted mesh so we can restore it
+  const prev = useRef<{
+    mesh: THREE.Mesh;
+    originalColors: THREE.Color[];
+  } | null>(null);
+
+  const clearHighlight = () => {
+    if (!prev.current) return;
+    const { mesh, originalColors } = prev.current;
+    originalColors.forEach((col, i) => {
+      const m = Array.isArray(mesh.material) ? mesh.material[i] : mesh.material;
+      (m as THREE.MeshStandardMaterial).color.copy(col);
+    });
+    prev.current = null;
+  };
+
+  const handleClick = (e: MouseEvent) => {
     if (!model) return;
-
     const rect = gl.domElement.getBoundingClientRect();
-    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    mouse.current.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.current.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
-    raycaster.setFromCamera(mouse, camera);
-
+    raycaster.current.setFromCamera(mouse.current, camera);
     const meshes: THREE.Mesh[] = [];
-    model.traverse(child => {
-      if ((child as THREE.Mesh).isMesh) meshes.push(child as THREE.Mesh);
+    model.traverse(c => {
+      if ((c as THREE.Mesh).isMesh) meshes.push(c as THREE.Mesh);
     });
 
-    const intersects = raycaster.intersectObjects(meshes, true);
-
-    if (intersects.length > 0) {
-      const { point } = intersects[0];
-
-      console.log(
-        `Clicked 3D Coordinate: x=${point.x}, y=${point.y}, z=${point.z}`
-      );
-
-      const clickedMuscle = MUSCLE_AREAS.find(
-        muscle =>
-          point.x >= muscle.xMin &&
-          point.x <= muscle.xMax &&
-          point.y >= muscle.yMin &&
-          point.y <= muscle.yMax &&
-          point.z >= muscle.zMin &&
-          point.z <= muscle.zMax
-      );
-
-      if (clickedMuscle) {
-        setModalData({ muscle: clickedMuscle.name, isOpen: true });
-
-        if (highlight) {
-          scene.remove(highlight);
-        }
-
-        const highlightMesh = new THREE.Mesh(
-          new THREE.PlaneGeometry(0.2, 0.2),
-          new THREE.MeshBasicMaterial({
-            color: 'red',
-            transparent: true,
-            opacity: 0.6,
-            side: THREE.DoubleSide,
-          })
-        );
-
-        highlightMesh.position.copy(point);
-        highlightMesh.lookAt(camera.position);
-        scene.add(highlightMesh);
-        setHighlight(highlightMesh);
-      } else {
-        setModalData({ muscle: '', isOpen: false });
-        if (highlight) scene.remove(highlight);
-      }
+    const hits = raycaster.current.intersectObjects(meshes, true);
+    if (!hits.length) {
+      clearHighlight();
+      setModalData({ muscle: '', isOpen: false });
+      return;
     }
+
+    const clicked = hits[0].object as THREE.Mesh;
+    // Determine the "muscle" name by walking up to the first named parent
+    const nodeName =
+      clicked.parent && clicked.parent.type === 'Group' && clicked.parent.name
+        ? clicked.parent.name
+        : clicked.name;
+
+    // **FILTER**: ignore anything whose name starts with "Cube" or is "RootNode"
+    if (/^(Cube|RootNode)/.test(nodeName)) {
+      // clicked on non-muscle → clear any old highlight but do nothing else
+      clearHighlight();
+      setModalData({ muscle: '', isOpen: false });
+      return;
+    }
+
+    // at this point it's a valid muscle part
+    // 1) clear old
+    clearHighlight();
+
+    // 2) clone & tint the clicked mesh
+    let originalColors: THREE.Color[];
+    if (Array.isArray(clicked.material)) {
+      clicked.material = clicked.material.map(
+        m => m.clone() as THREE.MeshStandardMaterial
+      );
+      originalColors = (clicked.material as THREE.MeshStandardMaterial[]).map(
+        m => m.color.clone()
+      );
+      clicked.material.forEach(m =>
+        (m as THREE.MeshStandardMaterial).color.set('#800080')
+      );
+    } else {
+      const mat = (clicked.material as THREE.MeshStandardMaterial).clone();
+      originalColors = [mat.color.clone()];
+      mat.color.set('#800080');
+      clicked.material = mat;
+    }
+
+    // 3) remember & fire modal
+    prev.current = { mesh: clicked, originalColors };
+    setModalData({ muscle: nodeName, isOpen: true });
   };
 
   useEffect(() => {
-    gl.domElement.addEventListener('click', handleClick);
-    return () => gl.domElement.removeEventListener('click', handleClick);
-  }, [model, highlight]);
+    const canvas = gl.domElement;
+    canvas.addEventListener('click', handleClick);
+    return () => canvas.removeEventListener('click', handleClick);
+  }, [model, camera]);
 
   return null;
 };
