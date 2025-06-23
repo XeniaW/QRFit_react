@@ -12,6 +12,7 @@ import {
   IonSelectOption,
   IonLabel,
 } from '@ionic/react';
+import { IonImg, IonThumbnail } from '@ionic/react';
 
 import './MachineList.css';
 import { firestore } from '../../firebase';
@@ -31,11 +32,20 @@ const MachineList: React.FC = () => {
   const muscleParam = params.get('muscle') || '';
 
   useEffect(() => {
+    let isMounted = true;
+
     const getMachines = async () => {
       const data = await getDocs(machineRef);
-      setMachines(data.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      if (isMounted) {
+        setMachines(data.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+      }
     };
+
     getMachines();
+
+    return () => {
+      isMounted = false;
+    };
   }, [machineRef]);
 
   // when machines load (or on first render), if there’s a muscleParam, preselect it
@@ -103,15 +113,24 @@ const MachineList: React.FC = () => {
 
         {/* Filtered Machines */}
         <IonList>
-          {filteredMachines.map(machine => (
-            <IonItem
-              button
-              key={machine.id}
-              routerLink={`/my/machines/${machine.id}`}
-            >
-              {machine.title}
-            </IonItem>
-          ))}
+          {filteredMachines.map(machine => {
+            const imageUrl = machine.image?.[0]?.downloadURL;
+            return (
+              <IonItem
+                button
+                key={machine.id}
+                routerLink={`/my/machines/${machine.id}`}
+              >
+                <IonThumbnail slot="start">
+                  <IonImg
+                    src={imageUrl || 'assets/icon/icon.png'} // fallback to default Ionic icon
+                    alt={machine.title}
+                  />
+                </IonThumbnail>
+                {machine.title}
+              </IonItem>
+            );
+          })}
         </IonList>
       </IonContent>
     </IonPage>

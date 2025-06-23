@@ -14,6 +14,7 @@ import {
   IonButton,
   IonText,
 } from '@ionic/react';
+import { IonImg, IonThumbnail } from '@ionic/react';
 import './MachineItem.css';
 import { firestore, auth } from '../../../firebase';
 import { useEffect, useState } from 'react';
@@ -114,6 +115,20 @@ const MachineItem: React.FC = () => {
             </IonCardHeader>
 
             <IonCardContent>
+              {machine?.image?.[0]?.downloadURL ? (
+                <IonImg
+                  src={machine.image[0].downloadURL}
+                  alt={machine.title}
+                  style={{ width: '100%', height: 'auto', objectFit: 'cover' }}
+                />
+              ) : (
+                <IonImg
+                  src="assets/icon/icon.png"
+                  alt="No image"
+                  style={{ width: '100%', height: 'auto', objectFit: 'cover' }}
+                />
+              )}
+
               <IonButton
                 expand="block"
                 fill="outline"

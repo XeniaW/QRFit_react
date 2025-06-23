@@ -4,7 +4,10 @@ export interface Machines {
   id: string;
   title: string;
   qrcode: string;
-  image?: string; // Optional image field
+  image: {
+    downloadURL: string;
+    // maybe: ref, type, name, etc.
+  }[];
   exercises: Exercise[]; // Array of exercises
 }
 
