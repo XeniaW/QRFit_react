@@ -24,7 +24,7 @@ const MostTrainedMusclesChart: React.FC<MostTrainedMusclesChartProps> = ({
     <ResponsiveContainer width="100%" height={300}>
       <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
         <PolarGrid />
-        <PolarAngleAxis dataKey="muscle" />
+        <PolarAngleAxis dataKey="muscle" tick={{ fontSize: 10 }} />
         <PolarRadiusAxis angle={30} domain={[0, 'dataMax']} />
         <Radar
           name="Muscle Workouts"

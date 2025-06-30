@@ -30,7 +30,7 @@
 
 /* each stat “card” */
 .stats-card {
-  flex: 0 0 30%; /* three cards per viewport */
+  flex: 0 0 50%; /* three cards per viewport */
   scroll-snap-align: start;
   min-width: 0; /* don’t allow flex items to overflow */
 }
