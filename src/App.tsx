@@ -30,6 +30,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
 
 import { TimerProvider } from './contexts/TimerContext'; // Import Timer Provider
+import PrivateRoute from './PrivateRoute'; // Import PrivateRoute
 
 setupIonicReact();
 
@@ -88,11 +89,22 @@ const App: React.FC = () => {
             <GlobalTimerHeader /> {/* Now correctly updates the title */}
             <Switch>
               <Route exact path="/" component={Home} />
-              <Route exact path="/modell" component={ModelPage} />
-              <Route exact path="/login" component={LoginModal} />
-              <Route exact path="/registration" component={RegisterModal} />
-              <Route path="/my" component={AppTabs} />
-              <Redirect exact path="/" to="/my/training" />
+
+              {/* 🔒 Protected routes */}
+              <Route exact path="/modell">
+                <PrivateRoute>
+                  <ModelPage />
+                </PrivateRoute>
+              </Route>
+
+              <Route path="/my">
+                <PrivateRoute>
+                  <AppTabs />
+                </PrivateRoute>
+              </Route>
+
+              {/* Redirect root to home */}
+              <Redirect exact path="/" to="/" />
             </Switch>
           </IonReactRouter>
         </AuthContext.Provider>
