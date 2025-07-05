@@ -5,6 +5,8 @@ import {
   IonSelect,
   IonSelectOption,
   IonLabel,
+  IonImg,
+  IonThumbnail,
 } from '@ionic/react';
 import { firestore } from '../../../../firebase';
 import { useEffect, useState } from 'react';
@@ -82,15 +84,24 @@ const AddMachinesFromTheList: React.FC<AddMachinesFromTheListProps> = ({
       </IonItem>
 
       <IonList>
-        {filteredMachines.map(machine => (
-          <IonItem
-            button
-            key={machine.id}
-            onClick={() => onSelectMachine(machine)}
-          >
-            {machine.title}
-          </IonItem>
-        ))}
+        {filteredMachines.map(machine => {
+          const imageUrl = machine.image?.[0]?.downloadURL;
+          return (
+            <IonItem
+              button
+              key={machine.id}
+              onClick={() => onSelectMachine(machine)}
+            >
+              <IonThumbnail slot="start">
+                <IonImg
+                  src={imageUrl || 'assets/icon/icon.png'}
+                  alt={machine.title}
+                />
+              </IonThumbnail>
+              {machine.title}
+            </IonItem>
+          );
+        })}
       </IonList>
     </IonContent>
   );
