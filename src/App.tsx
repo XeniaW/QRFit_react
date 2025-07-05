@@ -3,8 +3,8 @@ import { Redirect, Route, Switch } from 'react-router-dom';
 import { AuthContext } from './auth';
 import { IonReactRouter } from '@ionic/react-router';
 
-import Registration from './pages/registration/Registration';
-import Login from './pages/login/Login';
+import RegisterModal from './pages/registration/RegisterModal';
+import LoginModal from './pages/login/LoginModal';
 import Home from './pages/home/Home';
 import AppTabs from './AppTabs';
 import GlobalTimerHeader from './components/timer/GlobalTimerHeader'; // Import global timer header
@@ -89,8 +89,8 @@ const App: React.FC = () => {
             <Switch>
               <Route exact path="/" component={Home} />
               <Route exact path="/modell" component={ModelPage} />
-              <Route exact path="/login" component={Login} />
-              <Route exact path="/registration" component={Registration} />
+              <Route exact path="/login" component={LoginModal} />
+              <Route exact path="/registration" component={RegisterModal} />
               <Route path="/my" component={AppTabs} />
               <Redirect exact path="/" to="/my/training" />
             </Switch>
