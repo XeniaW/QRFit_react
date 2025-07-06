@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonPage,
   IonHeader,
@@ -22,6 +22,32 @@ import RegisterModal from '../registration/RegisterModal';
 const Home: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authTab, setAuthTab] = useState<'login' | 'register'>('login');
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [supportsPWA, setSupportsPWA] = useState(false);
+
+  // Capture the beforeinstallprompt event
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      console.log('beforeinstallprompt fired');
+      setDeferredPrompt(e);
+      setSupportsPWA(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`User response to install prompt: ${outcome}`);
+    setDeferredPrompt(null);
+    setSupportsPWA(false);
+  };
 
   return (
     <IonPage>
@@ -87,23 +113,20 @@ const Home: React.FC = () => {
         {/* Download */}
         <section className="section download">
           <h2>Download the App</h2>
-          <IonButton
-            fill="outline"
-            color="medium"
-            onClick={() => {
-              if (
-                'getInstalledRelatedApps' in navigator ||
-                'BeforeInstallPromptEvent' in window
-              ) {
-                window.location.reload(); // triggers PWA install prompt if available
-              } else {
-                alert('You can install this app from your browser menu.');
-              }
-            }}
-          >
-            <IonIcon icon={downloadOutline} slot="start" />
-            Install PWA
-          </IonButton>
+          {supportsPWA ? (
+            <IonButton
+              fill="outline"
+              color="medium"
+              onClick={handleInstallClick}
+            >
+              <IonIcon icon={downloadOutline} slot="start" />
+              Install PWA
+            </IonButton>
+          ) : (
+            <p style={{ color: '#666', fontSize: '14px' }}>
+              To install the app, use your browser’s menu.
+            </p>
+          )}
         </section>
       </IonContent>
 
