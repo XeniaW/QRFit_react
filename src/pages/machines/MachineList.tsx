@@ -123,7 +123,7 @@ const MachineList: React.FC = () => {
               >
                 <IonThumbnail slot="start">
                   <IonImg
-                    src={imageUrl || 'assets/icon/icon.png'} // fallback to default Ionic icon
+                    src={imageUrl || 'assets/pl_icon/icon_f_matt.png'} // fallback to default Ionic icon
                     alt={machine.title}
                   />
                 </IonThumbnail>

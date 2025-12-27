@@ -1,0 +1,257 @@
+/* =====================================================
+   Pawer Lifting — Ionic Theme Variables
+   ===================================================== */
+
+/* ===================== LIGHT THEME ===================== */
+:root {
+  /* Fonts globally */
+  --ion-font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    Arial;
+
+  /* Background/text (global mood) */
+  --ion-background-color: #0b0b10;
+  --ion-text-color: #f4f4f7;
+
+  /* Default radius vibe across components that respect it */
+  --ion-border-radius: 18px;
+
+  /* If you use Ionic color system */
+  --ion-color-primary: #c084fc;
+  --ion-color-primary-contrast: #0b0b10;
+
+  --ion-color-secondary: #1b1b24;
+  --ion-color-secondary-contrast: #f4f4f7;
+
+  /* Card-ish surface defaults */
+  --ion-item-background: rgba(255, 255, 255, 0.06);
+
+  /* ---------- PRIMARY (brand) ---------- */
+  --ion-color-primary: #a855f7;
+  --ion-color-primary-rgb: 168, 85, 247;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #974cde;
+  --ion-color-primary-tint: #b269f8;
+
+  /* ---------- SECONDARY (passive) ---------- */
+  --ion-color-secondary: #f3e8ff;
+  --ion-color-secondary-rgb: 243, 232, 255;
+  --ion-color-secondary-contrast: #332f2f;
+  --ion-color-secondary-contrast-rgb: 51, 47, 47;
+  --ion-color-secondary-shade: #e0d5eb;
+  --ion-color-secondary-tint: #f6edff;
+
+  /* ---------- TERTIARY (highlight / accent) ---------- */
+  --ion-color-tertiary: #a855f7;
+  --ion-color-tertiary-rgb: 168, 85, 247;
+  --ion-color-tertiary-contrast: #ffffff;
+  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
+  --ion-color-tertiary-shade: #974cde;
+  --ion-color-tertiary-tint: #b269f8;
+
+  /* ---------- WARNING / DANGER ---------- */
+  --ion-color-warning: #f87171;
+  --ion-color-warning-rgb: 248, 113, 113;
+  --ion-color-warning-contrast: #ffffff;
+  --ion-color-warning-contrast-rgb: 255, 255, 255;
+  --ion-color-warning-shade: #df6666;
+  --ion-color-warning-tint: #f97f7f;
+
+  --ion-color-danger: #f87171;
+  --ion-color-danger-rgb: 248, 113, 113;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #df6666;
+  --ion-color-danger-tint: #f97f7f;
+
+  /* ---------- SUCCESS (оставляем системный) ---------- */
+  --ion-color-success: #2dd36f;
+  --ion-color-success-rgb: 45, 211, 111;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #28ba62;
+  --ion-color-success-tint: #42d77d;
+
+  /* ---------- TEXT ---------- */
+  --ion-text-color: #332f2f;
+  --ion-text-color-rgb: 51, 47, 47;
+
+  /* ---------- BACKGROUND ---------- */
+  --ion-background-color: #faf5ff;
+  --ion-background-color-rgb: 250, 245, 255;
+
+  /* ---------- SURFACES ---------- */
+  --ion-item-background: rgba(255, 255, 255, 0.75);
+  --ion-card-background: rgba(255, 255, 255, 0.85);
+
+  /* ---------- NEUTRALS ---------- */
+  --ion-color-dark: #332f2f;
+  --ion-color-dark-rgb: 51, 47, 47;
+  --ion-color-medium: #8c8596;
+  --ion-color-medium-rgb: 140, 133, 150;
+  --ion-color-light: #ffffff;
+  --ion-color-light-rgb: 255, 255, 255;
+}
+
+/* Градиент фона */
+body {
+  background: linear-gradient(180deg, #faf5ff 0%, #ffffff 100%);
+  color: var(--ion-text-color);
+}
+
+/* ===================== DARK THEME ===================== */
+@media (prefers-color-scheme: light) {
+  body {
+    /* ---------- BACKGROUND ---------- */
+    --ion-background-color: #0f0a15;
+    --ion-background-color-rgb: 15, 10, 21;
+
+    /* ---------- TEXT ---------- */
+    --ion-text-color: #f7f2ff;
+    --ion-text-color-rgb: 247, 242, 255;
+
+    /* ---------- PRIMARY ---------- */
+    --ion-color-primary: #c084fc;
+    --ion-color-primary-rgb: 192, 132, 252;
+    --ion-color-primary-contrast: #140a1e;
+    --ion-color-primary-contrast-rgb: 20, 10, 30;
+    --ion-color-primary-shade: #ad77e3;
+    --ion-color-primary-tint: #c690fc;
+
+    /* ---------- SECONDARY (surface) ---------- */
+    --ion-color-secondary: #2a1b3d;
+    --ion-color-secondary-rgb: 42, 27, 61;
+    --ion-color-secondary-contrast: #f7f2ff;
+    --ion-color-secondary-contrast-rgb: 247, 242, 255;
+
+    /* ---------- WARNING / DANGER ---------- */
+    --ion-color-warning: #f87171;
+    --ion-color-warning-contrast: #140a1e;
+
+    --ion-color-danger: #f87171;
+    --ion-color-danger-contrast: #140a1e;
+
+    /* ---------- SURFACES ---------- */
+    --ion-item-background: #1a1024;
+    --ion-card-background: #1f1430;
+
+    /* ---------- UI ---------- */
+    --ion-border-color: #2a1b3d;
+    --ion-toolbar-background: #1a1024;
+    --ion-tab-bar-background: #1a1024;
+  }
+
+  body {
+    background: linear-gradient(180deg, #0f0a15 0%, #140a1e 100%);
+  }
+}
+
+/* Welcome Card - image on the left - text on the right */
+.welcome-card {
+  margin: 0;
+  border-radius: 18px;
+  background: var(--pl-secondary-bg, var(--ion-color-light));
+}
+
+.welcome-card__content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.welcome-card__left {
+  flex: 0 0 auto;
+}
+
+.welcome-card__logo {
+  width: 100px;
+  height: auto;
+  border-radius: 12px;
+  object-fit: contain;
+  display: block;
+}
+
+.welcome-card__text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.welcome-card__subtitle {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.welcome-card__title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-top: 2px;
+  text-transform: capitalize;
+}
+
+.welcome-card__desc {
+  font-size: 14px;
+  opacity: 0.85;
+  margin-top: 6px;
+}
+
+/* Quick card - icon on the right, text on the left */
+.quick-card {
+  margin: 0;
+  border-radius: 18px;
+}
+
+.quick-card__content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 74px;
+}
+
+.quick-card__title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.quick-card__roundbtn {
+  width: 42px;
+  height: 42px;
+}
+
+/* Advisor card - primary background - white text */
+.advisor-card {
+  margin: 0;
+  border-radius: 18px;
+  background: var(--ion-color-primary);
+  color: var(--ion-color-primary-contrast);
+}
+
+.advisor-card__content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.advisor-card__text {
+  min-width: 0;
+}
+
+.advisor-card__title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.advisor-card__desc {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-top: 4px;
+}
+
+.training-hero {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 18px;
+}

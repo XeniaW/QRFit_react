@@ -10,7 +10,7 @@ import {
   IonBackButton,
   IonToast,
 } from '@ionic/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { firestore } from '../../../firebase';
 import { doc, getDoc, DocumentReference } from 'firebase/firestore';
 import {
@@ -31,6 +31,7 @@ interface MachineDetails {
   machine: Machines;
   exerciseName: string | null;
   sets: MachineSession['sets'];
+  musclesTrained: string[]; // <-- added
 }
 
 const TrainingSessionDetails: React.FC = () => {
@@ -68,14 +69,54 @@ const TrainingSessionDetails: React.FC = () => {
         const msRef = doc(firestore, 'machine_sessions', msId);
         const msDoc = await getDoc(msRef);
         if (!msDoc.exists()) return null;
+
         const msData = msDoc.data() as MachineSession;
         const machineRef = msData.machine_ref as DocumentReference;
+
         const machineDoc = await getDoc(machineRef);
         if (!machineDoc.exists()) return null;
+
+        const machine = { id: machineDoc.id, ...machineDoc.data() } as Machines;
+
+        const exerciseName = msData.exercise_name || null;
+
+        // ---- derive muscles for this machine session ----
+        const exercises = Array.isArray(machine.exercises)
+          ? machine.exercises
+          : [];
+
+        let muscles: string[] = [];
+
+        if (exerciseName) {
+          const ex = exercises.find(e => e?.name === exerciseName);
+          muscles = Array.isArray(ex?.muscles) ? ex!.muscles : [];
+        } else {
+          // fallback: aggregate all muscles for this machine
+          const set = new Set<string>();
+          exercises.forEach(e => {
+            const m = Array.isArray(e?.muscles) ? e.muscles : [];
+            m.forEach(x => {
+              const t = typeof x === 'string' ? x.trim() : '';
+              if (t) set.add(t);
+            });
+          });
+          muscles = Array.from(set);
+        }
+
+        // normalize + dedupe
+        const musclesTrained = Array.from(
+          new Set(
+            muscles
+              .map(m => (typeof m === 'string' ? m.trim() : ''))
+              .filter(Boolean)
+          )
+        );
+
         return {
-          machine: { id: machineDoc.id, ...machineDoc.data() } as Machines,
-          exerciseName: msData.exercise_name || null,
+          machine,
+          exerciseName,
           sets: msData.sets,
+          musclesTrained,
         } as MachineDetails;
       });
 
@@ -84,6 +125,7 @@ const TrainingSessionDetails: React.FC = () => {
       );
       setMachineDetails(detailed);
     };
+
     fetchSession();
   }, [id, userId]);
 
@@ -106,6 +148,7 @@ const TrainingSessionDetails: React.FC = () => {
       return;
     }
     if (!name.trim()) return;
+
     try {
       const msForRoutine: MachineSession[] = machineDetails.map(
         md =>
@@ -137,13 +180,27 @@ const TrainingSessionDetails: React.FC = () => {
   const endDate = trainingSession
     ? convertFirestoreTimestampToDate(trainingSession.end_date)
     : null;
+
   const formattedStartDate = startDate
     ? startDate.toLocaleString()
     : 'No Start Date';
+
   const duration =
     startDate && endDate
       ? calculateDuration(startDate, endDate)
       : 'Duration not available';
+
+  // Session-level muscles (union across all machine sessions)
+  const sessionMusclesTrained = useMemo(() => {
+    const set = new Set<string>();
+    machineDetails.forEach(md => {
+      (md.musclesTrained || []).forEach(m => set.add(m));
+    });
+    return Array.from(set);
+  }, [machineDetails]);
+
+  const sessionMusclesText =
+    sessionMusclesTrained.length > 0 ? sessionMusclesTrained.join(', ') : '-';
 
   return (
     <IonPage>
@@ -158,6 +215,7 @@ const TrainingSessionDetails: React.FC = () => {
 
       <IonContent fullscreen>
         <h2>Session ID: {id}</h2>
+
         <p>
           <strong>Date:</strong> {formattedStartDate}
         </p>
@@ -165,38 +223,52 @@ const TrainingSessionDetails: React.FC = () => {
           <strong>Duration:</strong> {duration}
         </p>
 
+        {/* Added: muscles trained for the whole session */}
+        <p>
+          <strong>Muscles trained:</strong> {sessionMusclesText}
+        </p>
+
         <p>
           <strong>Machines:</strong>
         </p>
+
         {machineDetails.length > 0 ? (
           <ul>
-            {machineDetails.map(({ machine, sets, exerciseName }) => {
-              const showExerciseName =
-                exerciseName && exerciseName !== machine.title
-                  ? ` - ${exerciseName}`
-                  : '';
-              return (
-                <li key={machine.id}>
-                  <p>
-                    <strong>
-                      {machine.title || 'Unnamed Machine'}
-                      {showExerciseName}
-                    </strong>
-                  </p>
-                  {sets.length > 0 ? (
-                    <ul>
-                      {sets.map(set => (
-                        <li key={set.set_number}>
-                          Set {set.set_number}: {set.reps} reps, {set.weight} kg
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p>No sets recorded.</p>
-                  )}
-                </li>
-              );
-            })}
+            {machineDetails.map(
+              ({ machine, sets, exerciseName, musclesTrained }) => {
+                const showExerciseName =
+                  exerciseName && exerciseName !== machine.title
+                    ? ` - ${exerciseName}`
+                    : '';
+
+                const musclesText =
+                  musclesTrained.length > 0 ? musclesTrained.join(', ') : '-';
+
+                return (
+                  <li key={machine.id}>
+                    <p>
+                      <strong>
+                        {machine.title || 'Unnamed Machine'}
+                        {showExerciseName}
+                      </strong>
+                    </p>
+
+                    {sets.length > 0 ? (
+                      <ul>
+                        {sets.map(set => (
+                          <li key={set.set_number}>
+                            Set {set.set_number}: {set.reps} reps, {set.weight}{' '}
+                            kg
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>No sets recorded.</p>
+                    )}
+                  </li>
+                );
+              }
+            )}
           </ul>
         ) : (
           <p>No machines added for this session.</p>
@@ -213,7 +285,6 @@ const TrainingSessionDetails: React.FC = () => {
           Delete Session
         </IonButton>
 
-        {/* Delete Confirmation */}
         <IonAlert
           isOpen={showDeleteAlert}
           onDidDismiss={() => setShowDeleteAlert(false)}
@@ -229,7 +300,6 @@ const TrainingSessionDetails: React.FC = () => {
           ]}
         />
 
-        {/* Routine Name Prompt */}
         <IonAlert
           isOpen={showSaveAlert}
           onDidDismiss={() => setShowSaveAlert(false)}
@@ -254,7 +324,6 @@ const TrainingSessionDetails: React.FC = () => {
           ]}
         />
 
-        {/* Feedback Toast */}
         <IonToast
           isOpen={showToast.isOpen}
           message={showToast.message}

@@ -1,0 +1,41 @@
+.tsw {
+  display: grid;
+  gap: 10px;
+}
+
+.tsw__heading {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.tsw__cards {
+  display: grid;
+  gap: 10px;
+}
+
+.tsw__card {
+  margin: 0;
+  border-radius: 18px;
+}
+
+.tsw__cardContent {
+  padding: 14px;
+}
+
+.tsw__cardDate {
+  font-size: 13px;
+  opacity: 0.85;
+  margin-bottom: 8px;
+}
+
+.tsw__line {
+  font-size: 13px;
+  opacity: 0.92;
+  margin-top: 4px;
+}
+
+/* ensure the "Show more" is full width and visually consistent */
+.tsw__showMoreBtn {
+  margin-top: 2px;
+}

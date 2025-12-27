@@ -94,7 +94,7 @@ const AddMachinesFromTheList: React.FC<AddMachinesFromTheListProps> = ({
             >
               <IonThumbnail slot="start">
                 <IonImg
-                  src={imageUrl || 'assets/icon/icon.png'}
+                  src={imageUrl || 'assets/pl_icon/icon_f_matt.png'}
                   alt={machine.title}
                 />
               </IonThumbnail>

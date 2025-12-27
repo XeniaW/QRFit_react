@@ -123,7 +123,7 @@ const MachineItem: React.FC = () => {
                 />
               ) : (
                 <IonImg
-                  src="assets/icon/icon.png"
+                  src="assets/pl_icon/icon_f_matt.png"
                   alt="No image"
                   style={{ width: '100%', height: 'auto', objectFit: 'cover' }}
                 />
