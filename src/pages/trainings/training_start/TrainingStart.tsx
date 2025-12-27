@@ -10,6 +10,7 @@ import {
   IonTitle,
 } from '@ionic/react';
 import { getDoc, doc } from 'firebase/firestore';
+import { useLocation, useHistory } from 'react-router-dom';
 
 import './TrainingStart.css';
 import { Machines } from '../../../datamodels';
@@ -59,6 +60,9 @@ const StartTrainingSession: React.FC = () => {
 
   // -- Auth --
   const { userId } = useAuth();
+
+  const location = useLocation();
+  const history = useHistory();
 
   // -- States --
   const [sessionId, setSessionId] = useState<string | null>(() =>
@@ -163,6 +167,29 @@ const StartTrainingSession: React.FC = () => {
     setShowStartAlert(false);
   };
 
+  // Auto-start on navigation from Training page
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const autostart = params.get('autostart') === '1';
+
+    if (!autostart) return;
+    if (!userId) return;
+
+    // If already running or session exists, do nothing
+    if (isRunning || sessionId) {
+      // Clean query param so refresh doesn't re-trigger intent forever
+      history.replace('/my/trainingstart');
+      return;
+    }
+
+    // Start immediately
+    handleStartTraining();
+
+    // Clean query param after starting
+    history.replace('/my/trainingstart');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search, userId]);
+
   // Called by the IonAlert in StartEndControls
   const handleEndTraining = () => {
     if (!sessionId) return console.error('No session to end');
@@ -187,6 +214,7 @@ const StartTrainingSession: React.FC = () => {
           setMachineSessions([]);
           clearActiveWorkout();
           clearWorkoutNotification();
+          history.replace('/my/training');
         },
         err => console.error(err)
       );
@@ -204,6 +232,7 @@ const StartTrainingSession: React.FC = () => {
       setMachineSessions([]);
       clearActiveWorkout();
       clearWorkoutNotification();
+      history.replace('/my/training');
     }
 
     setShowEndAlert(false);

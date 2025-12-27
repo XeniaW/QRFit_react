@@ -11,26 +11,38 @@ import {
   IonCardContent,
   IonText,
   IonIcon,
+  IonAlert,
 } from '@ionic/react';
-import React from 'react';
+import React, { useState } from 'react';
 import { add, clipboardOutline, personCircleOutline } from 'ionicons/icons';
-import { useAuth } from '../../../auth'; // Adjust the path to your AuthContext
+import { useAuth } from '../../../auth';
 import TrainingSessionsWidget from '../../trainings/training_sessions/TrainingSessionsWidget';
+import { useHistory } from 'react-router-dom';
 
 import './Training.css';
 
 const Training: React.FC = () => {
   const { email } = useAuth();
+  const history = useHistory();
 
-  // Basic "Name" fallback from email
+  const [showStartPrompt, setShowStartPrompt] = useState(false);
+
   const name =
     (email && email.includes('@') ? email.split('@')[0] : '') || 'Guest';
+
+  const handleNewWorkoutClick = () => {
+    setShowStartPrompt(true);
+  };
+
+  const handleConfirmStart = () => {
+    setShowStartPrompt(false);
+    history.push('/my/trainingstart?autostart=1');
+  };
 
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          {/* Left: logo */}
           <div
             style={{
               display: 'flex',
@@ -41,7 +53,6 @@ const Training: React.FC = () => {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {/* Replace with your logo path */}
               <img
                 src="/assets/pl_icon/icon_nf_matt.png"
                 alt="Pawer Lifting"
@@ -52,7 +63,6 @@ const Training: React.FC = () => {
               </IonTitle>
             </div>
 
-            {/* Right: round account button */}
             <IonButton
               shape="round"
               fill="clear"
@@ -66,7 +76,6 @@ const Training: React.FC = () => {
       </IonHeader>
 
       <IonContent fullscreen className="training-content">
-        {/* Welcome card (secondary background) */}
         <IonRow className="ion-padding">
           <IonCol size="12">
             <IonCard className="welcome-card">
@@ -93,13 +102,12 @@ const Training: React.FC = () => {
           </IonCol>
         </IonRow>
 
-        {/* 2 cards in one line */}
         <IonRow className="ion-padding" style={{ paddingTop: 0 }}>
           <IonCol size="6">
             <IonCard
               className="quick-card"
               button
-              routerLink="/my/trainingstart"
+              onClick={handleNewWorkoutClick}
             >
               <IonCardContent className="quick-card__content">
                 <div className="quick-card__text">
@@ -112,6 +120,11 @@ const Training: React.FC = () => {
                   color="primary"
                   className="quick-card__roundbtn"
                   aria-label="New workout"
+                  onClick={e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleNewWorkoutClick();
+                  }}
                 >
                   <IonIcon icon={add} slot="icon-only" />
                 </IonButton>
@@ -140,7 +153,6 @@ const Training: React.FC = () => {
           </IonCol>
         </IonRow>
 
-        {/* Primary card: Muscle advisor */}
         <IonRow className="ion-padding" style={{ paddingTop: 0 }}>
           <IonCol size="12">
             <IonCard className="advisor-card">
@@ -170,7 +182,17 @@ const Training: React.FC = () => {
             <TrainingSessionsWidget variant="preview" />
           </IonCol>
         </IonRow>
-        {/* If you still want the old navigation buttons, keep them—but you asked to replace, so I’m not duplicating clutter. */}
+
+        {/* Start prompt */}
+        <IonAlert
+          isOpen={showStartPrompt}
+          onDidDismiss={() => setShowStartPrompt(false)}
+          header="Are you ready to pump?"
+          buttons={[
+            { text: 'No', role: 'cancel' },
+            { text: 'Yes', handler: handleConfirmStart },
+          ]}
+        />
       </IonContent>
     </IonPage>
   );

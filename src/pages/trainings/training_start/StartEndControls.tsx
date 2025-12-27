@@ -30,17 +30,14 @@ const StartEndControls: React.FC<StartEndControlsProps> = ({
 
   return (
     <>
-      {!isRunning ? (
-        <IonButton onClick={() => setShowStartAlert(true)}>
-          Start Training
-        </IonButton>
-      ) : (
+      {/* Start button removed. Only show End when running */}
+      {isRunning && (
         <IonButton color="danger" expand="full" onClick={handleEndTraining}>
           End Training
         </IonButton>
       )}
 
-      {/* Alert: Start Session */}
+      {/* Alert: Start Session (kept for compatibility, can still be triggered externally if you want) */}
       <IonAlert
         isOpen={showStartAlert}
         onDidDismiss={() => setShowStartAlert(false)}
