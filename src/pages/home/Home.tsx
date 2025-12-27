@@ -53,7 +53,7 @@ const Home: React.FC = () => {
     <IonPage>
       {/* Top Menu */}
       <IonToolbar>
-        <IonTitle slot="start">QRFit</IonTitle>
+        <IonTitle slot="start">PawerLifting</IonTitle>
 
         <div className="promo-menu-toolbar">
           <a href="#what">What</a>
@@ -73,7 +73,7 @@ const Home: React.FC = () => {
         {/* Hero Section */}
         <section className="hero">
           <img src="/assets/sil.png" alt="Hero" className="hero-img" />
-          <h1>Stay Healthy with QRFit</h1>
+          <h1>Lift with heart!</h1>
           <IonButton
             fill="solid"
             color="primary"
@@ -87,8 +87,8 @@ const Home: React.FC = () => {
         <section id="what" className="section">
           <h2>What</h2>
           <p>
-            QRFit is the ONE PWA that will keep you healthy and fit — anytime,
-            anywhere.
+            PawerLifting is the ONE PWA that will keep you healthy and fit —
+            anytime, anywhere.
           </p>
         </section>
 
@@ -96,8 +96,8 @@ const Home: React.FC = () => {
         <section id="who" className="section alt">
           <h2>Who</h2>
           <p>
-            I'm a female developer and hobby gym-goer. QRFit is my passion
-            project combining code and health ❤️
+            I'm a female developer and hobby gym-goer. PawerLifting is my
+            passion project combining code and health ❤️
           </p>
         </section>
 
@@ -151,7 +151,7 @@ const Home: React.FC = () => {
           </IonRow>
           <IonRow className="ion-justify-content-center">
             <p style={{ fontSize: '12px', color: '#888' }}>
-              © 2025 QRFit. Built with 💪
+              © 2025 PawerLifting. Built with ❤️
             </p>
           </IonRow>
         </IonGrid>

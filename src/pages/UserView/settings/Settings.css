@@ -1,0 +1,60 @@
+.settings-content {
+  /* optional if you already have a page bg */
+}
+
+/* Small muted line (version etc) */
+.settings-muted {
+  opacity: 0.7;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+/* Language card toggle block on the right */
+.language-card .quick-card__desc {
+  opacity: 0.75;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.language-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.language-label {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* Support: keep two buttons tight and aligned */
+.support-card__content {
+  display: block !important; /* keep your existing card layout intact */
+}
+
+.support-buttons {
+  margin-top: 10px;
+}
+
+.support-btn {
+  width: 100%;
+}
+
+/* Danger zone: slight red background */
+.dangerzone-card {
+  background: rgba(248, 113, 113, 0.12) !important; /* light warning red */
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  color: var(--ion-color-secondary-contrast) !important;
+}
+
+.dangerzone-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.dangerzone-actions ion-button {
+  flex: 1 1 auto;
+  min-width: 140px;
+}
