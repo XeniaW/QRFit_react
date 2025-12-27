@@ -17,18 +17,22 @@ export interface StatItem {
  * all wrapped in an outer IonCard container.
  */
 const StatsOverview: React.FC<{ items: StatItem[] }> = ({ items }) => (
-  <IonCard className="stats-overview-container">
+  <IonCard className="stats-overview-container welcome-card">
     <IonCardHeader>
       <IonCardTitle>Your Stats</IonCardTitle>
     </IonCardHeader>
     <IonCardContent className="stats-overview-content">
       <div className="stats-snap-container">
         {items.map((item, idx) => (
-          <IonCard className="stats-card" key={idx}>
+          <IonCard className="stats-card advisor-card" key={idx}>
             <IonCardHeader>
-              <IonCardTitle>{item.title}</IonCardTitle>
+              <IonCardTitle className="stats-card__title">
+                {item.title}
+              </IonCardTitle>
             </IonCardHeader>
-            <IonCardContent>{item.value}</IonCardContent>
+            <IonCardContent className="stats-card__content">
+              {item.value}
+            </IonCardContent>
           </IonCard>
         ))}
       </div>

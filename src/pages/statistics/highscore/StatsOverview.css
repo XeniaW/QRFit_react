@@ -27,10 +27,20 @@
   -ms-overflow-style: auto; /* IE/Edge */
   scrollbar-width: auto; /* Firefox */
 }
+.stats-overview-container {
+  margin-bottom: 16px !important;
+}
+.stats-overview-container .stats-card__content {
+  font-size: 18px;
+  text-align: center;
+}
 
 /* each stat “card” */
 .stats-card {
   flex: 0 0 50%; /* three cards per viewport */
   scroll-snap-align: start;
   min-width: 0; /* don’t allow flex items to overflow */
+}
+.stats-card .stats-card__title {
+  color: var(--ion-color-primary-contrast);
 }

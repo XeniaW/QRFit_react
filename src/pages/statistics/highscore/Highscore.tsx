@@ -1,18 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonButtons,
-  IonBackButton,
-  IonTitle,
-  IonContent,
   IonSpinner,
   IonText,
   IonCard,
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
+  IonSegment,
+  IonSegmentButton,
+  IonLabel,
 } from '@ionic/react';
 import {
   collection,
@@ -47,8 +43,63 @@ interface Stats {
   firstTrainingDate: string;
 }
 
-const Highscore: React.FC = () => {
+type MuscleRange = 'week' | 'month' | 'all';
+
+const DEBUG_MUSCLE_FILTER = true;
+
+/**
+ * Normalize timestamps to SECONDS.
+ * Supports:
+ * - Firestore Timestamp: { seconds } OR { toMillis() }
+ * - Firestore internal shapes: { _seconds }
+ * - numbers in seconds
+ * - numbers in milliseconds (Date.now())
+ * - numeric strings in seconds/ms
+ */
+function toSeconds(ts: any): number | null {
+  if (ts == null) return null;
+
+  if (typeof ts === 'object' && typeof ts.toMillis === 'function') {
+    const ms = ts.toMillis();
+    if (!Number.isFinite(ms)) return null;
+    return Math.floor(ms / 1000);
+  }
+
+  if (typeof ts === 'object' && ts.seconds != null) {
+    const s = Number(ts.seconds);
+    if (!Number.isFinite(s)) return null;
+    return s;
+  }
+
+  if (typeof ts === 'object' && ts._seconds != null) {
+    const s = Number(ts._seconds);
+    if (!Number.isFinite(s)) return null;
+    return s;
+  }
+
+  if (typeof ts === 'number') {
+    if (!Number.isFinite(ts)) return null;
+    return ts > 1e12 ? Math.floor(ts / 1000) : ts;
+  }
+
+  if (typeof ts === 'string') {
+    const n = Number(ts);
+    if (!Number.isFinite(n)) return null;
+    return n > 1e12 ? Math.floor(n / 1000) : n;
+  }
+
+  return null;
+}
+
+/**
+ * Embedded version: renders ONLY the statistics content (no IonPage / Header / BackButton).
+ * Use this inside the Statistics page.
+ */
+export const HighscoreContent: React.FC = () => {
   const [loading, setLoading] = useState(true);
+
+  const [muscleRange, setMuscleRange] = useState<MuscleRange>('month');
+
   const [stats, setStats] = useState<Stats>({
     workoutsCompleted: 0,
     totalTrainingTime: 0,
@@ -62,7 +113,19 @@ const Highscore: React.FC = () => {
     exercisesPerWorkout: 0,
     firstTrainingDate: '',
   });
-  const [muscleData, setMuscleData] = useState<MuscleData[]>([]);
+
+  // NEW: master list of all muscles (so we can show zeros too)
+  const [allMuscles, setAllMuscles] = useState<string[]>([]);
+
+  // sessionId -> session start timestamp (seconds)
+  const [sessionStartById, setSessionStartById] = useState<
+    Record<string, number>
+  >({});
+
+  // sessionId -> unique muscles trained in that session
+  const [musclesBySession, setMusclesBySession] = useState<
+    Record<string, string[]>
+  >({});
 
   const getWeekNumber = (date: Date) => {
     const firstDay = new Date(date.getFullYear(), 0, 1);
@@ -76,15 +139,25 @@ const Highscore: React.FC = () => {
         const userId = auth.currentUser?.uid;
         if (!userId) return;
 
-        // 1) build exercise → muscles map
+        // 1) build exercise → muscles map + master muscle list
         const machinesSnap = await getDocs(collection(firestore, 'machines'));
         const exerciseMusclesByName: Record<string, string[]> = {};
+        const muscleSet = new Set<string>();
+
         machinesSnap.docs.forEach(docSnap => {
           const m = docSnap.data() as any;
           (m.exercises ?? []).forEach((ex: any) => {
-            exerciseMusclesByName[ex.name] = ex.muscles ?? [];
+            const muscles: string[] = ex.muscles ?? [];
+            exerciseMusclesByName[ex.name] = muscles;
+
+            muscles.forEach((mus: string) => {
+              if (mus && typeof mus === 'string') muscleSet.add(mus);
+            });
           });
         });
+
+        // stable-ish order: alphabetical
+        setAllMuscles(Array.from(muscleSet).sort((a, b) => a.localeCompare(b)));
 
         // 2) fetch training_sessions
         const tsSnap = await getDocs(
@@ -93,22 +166,30 @@ const Highscore: React.FC = () => {
             where('user_id', '==', userId)
           )
         );
+
         let totalDuration = 0;
         let longestDuration = 0;
         let totalExercises = 0;
         const sessionDates: number[] = [];
         let firstTrainingTs = Number.MAX_SAFE_INTEGER;
 
+        const startMap: Record<string, number> = {};
+
         tsSnap.forEach(docSnap => {
           const d = docSnap.data() as any;
-          const start = d.start_date?.seconds;
-          const end = d.end_date?.seconds;
+
+          const start = toSeconds(d.start_date);
+          const end = toSeconds(d.end_date);
           if (start == null || end == null) return;
+
           const dur = end - start;
           totalDuration += dur;
           longestDuration = Math.max(longestDuration, dur);
           sessionDates.push(start);
           firstTrainingTs = Math.min(firstTrainingTs, start);
+
+          startMap[docSnap.id] = start;
+
           if (Array.isArray(d.machine_sessions)) {
             totalExercises += d.machine_sessions.length;
           }
@@ -133,21 +214,48 @@ const Highscore: React.FC = () => {
             where('user_id', '==', userId)
           )
         );
+
         const usageCount: Record<string, number> = {};
         let highestWeight = 0;
         let highestWeightMachineId = '';
 
+        const sessionMuscles: Record<string, Set<string>> = {};
+
         msSnap.docs.forEach(ds => {
           const m = ds.data() as any;
-          const mid = m.machine_ref.id;
-          usageCount[mid] = (usageCount[mid] || 0) + 1;
+
+          const mid = m.machine_ref?.id;
+          if (mid) usageCount[mid] = (usageCount[mid] || 0) + 1;
+
           (m.sets ?? []).forEach((s: any) => {
             if (s.weight > highestWeight) {
               highestWeight = s.weight;
-              highestWeightMachineId = mid;
+              highestWeightMachineId = mid || '';
             }
           });
+
+          const sid = m.session_id ?? m.training_session_id;
+          if (!sid) return;
+
+          if (!sessionMuscles[sid]) sessionMuscles[sid] = new Set();
+
+          const muscles = exerciseMusclesByName[m.exercise_name] ?? [];
+          muscles.forEach((mus: string) => sessionMuscles[sid].add(mus));
+
+          // fallback: infer start for sid if needed
+          if (startMap[sid] == null) {
+            const msStart = toSeconds(m.start_date ?? m.started_at ?? m.date);
+            if (msStart != null) startMap[sid] = msStart;
+          }
         });
+
+        setSessionStartById(startMap);
+
+        const musclesBySessionArr: Record<string, string[]> = {};
+        Object.entries(sessionMuscles).forEach(([sid, set]) => {
+          musclesBySessionArr[sid] = Array.from(set);
+        });
+        setMusclesBySession(musclesBySessionArr);
 
         // favorite machine
         let favoriteMachine = '';
@@ -173,24 +281,6 @@ const Highscore: React.FC = () => {
             : '';
         }
 
-        // 5) count muscles per workout (unique per training session)
-        const sessionMuscles: Record<string, Set<string>> = {};
-        msSnap.docs.forEach(ds => {
-          const m = ds.data() as any;
-          const sid = m.session_id ?? m.training_session_id;
-          if (!sessionMuscles[sid]) sessionMuscles[sid] = new Set();
-          const muscles = exerciseMusclesByName[m.exercise_name] ?? [];
-          muscles.forEach(mus => sessionMuscles[sid].add(mus));
-        });
-        const counts: Record<string, number> = {};
-        Object.values(sessionMuscles).forEach(set =>
-          set.forEach(mus => (counts[mus] = (counts[mus] || 0) + 1))
-        );
-        const muscleArray: MuscleData[] = Object.entries(counts)
-          .map(([muscle, count]) => ({ muscle, count }))
-          .sort((a, b) => b.count - a.count);
-
-        // set all state
         setStats({
           workoutsCompleted: tsSnap.size,
           totalTrainingTime: totalDuration,
@@ -208,7 +298,6 @@ const Highscore: React.FC = () => {
           ),
           firstTrainingDate: firstTrainingTs ? formatDate(firstTrainingTs) : '',
         });
-        setMuscleData(muscleArray);
       } catch (err) {
         console.error(err);
       } finally {
@@ -219,21 +308,56 @@ const Highscore: React.FC = () => {
     fetchStatistics();
   }, []);
 
+  // Derived muscle chart data based on range
+  const muscleData: MuscleData[] = useMemo(() => {
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    let cutoff = 0;
+    if (muscleRange === 'week') cutoff = nowSec - 7 * 24 * 60 * 60;
+    if (muscleRange === 'month') cutoff = nowSec - 30 * 24 * 60 * 60;
+
+    const counts: Record<string, number> = {};
+
+    let includedSessions = 0;
+    let totalSessions = 0;
+
+    Object.entries(musclesBySession).forEach(([sid, muscles]) => {
+      totalSessions += 1;
+
+      const start = sessionStartById[sid];
+      if (start == null) return;
+
+      if (muscleRange !== 'all' && start < cutoff) return;
+
+      includedSessions += 1;
+      muscles.forEach(mus => {
+        counts[mus] = (counts[mus] || 0) + 1;
+      });
+    });
+
+    if (DEBUG_MUSCLE_FILTER) {
+      console.log('[muscleRange]', muscleRange);
+      console.log('[cutoff]', cutoff, new Date(cutoff * 1000).toISOString());
+      console.log('[sessions]', { totalSessions, includedSessions });
+      console.log('[muscles total]', allMuscles.length);
+      console.log('[muscles used]', Object.keys(counts).length);
+    }
+
+    // IMPORTANT: always return ALL muscles (unused => 0)
+    // If allMuscles not loaded yet, fall back to used ones.
+    const baseList = allMuscles.length ? allMuscles : Object.keys(counts);
+
+    return baseList.map(muscle => ({
+      muscle,
+      count: counts[muscle] || 0,
+    }));
+  }, [muscleRange, musclesBySession, sessionStartById, allMuscles]);
+
   if (loading) {
     return (
-      <IonPage>
-        <IonHeader>
-          <IonToolbar>
-            <IonButtons slot="start">
-              <IonBackButton defaultHref="/my/statistics" />
-            </IonButtons>
-            <IonTitle>Statistics</IonTitle>
-          </IonToolbar>
-        </IonHeader>
-        <IonContent fullscreen>
-          <IonSpinner />
-        </IonContent>
-      </IonPage>
+      <div style={{ padding: 16 }}>
+        <IonSpinner />
+      </div>
     );
   }
 
@@ -266,44 +390,62 @@ const Highscore: React.FC = () => {
   ];
 
   return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonButtons slot="start">
-            <IonBackButton defaultHref="/my/statistics" />
-          </IonButtons>
-          <IonTitle>Statistics</IonTitle>
-        </IonToolbar>
-      </IonHeader>
+    <div style={{ padding: 16 }}>
+      <StatsOverview items={items} />
 
-      <IonContent fullscreen style={{ padding: '16px' }}>
-        <StatsOverview items={items} />
+      <IonCard className="welcome-card">
+        <IonCardHeader>
+          <IonCardTitle>Muscle Spread</IonCardTitle>
+        </IonCardHeader>
+        <IonCardContent>
+          <IonText className="welcome-card__text">
+            This chart shows how many workouts involved each muscle group. Each
+            muscle is counted once per workout, regardless of how many sets
+            targeted it.
+          </IonText>
 
-        <IonCard>
-          <IonCardHeader>
-            <IonCardTitle>Muscle Spread</IonCardTitle>
-          </IonCardHeader>
-          <IonCardContent>
-            <IonText>
-              This chart shows how many workouts involved each muscle group.
-              Each muscle is counted once per workout, regardless of how many
-              sets targeted it.
+          <div style={{ marginTop: 12, marginBottom: 12 }}>
+            <IonSegment
+              value={muscleRange}
+              onIonChange={e => {
+                const v = e.detail.value;
+                if (v === 'week' || v === 'month' || v === 'all')
+                  setMuscleRange(v);
+              }}
+            >
+              <IonSegmentButton value="week">
+                <IonLabel>Week</IonLabel>
+              </IonSegmentButton>
+              <IonSegmentButton value="month">
+                <IonLabel>Month</IonLabel>
+              </IonSegmentButton>
+              <IonSegmentButton value="all">
+                <IonLabel>All</IonLabel>
+              </IonSegmentButton>
+            </IonSegment>
+          </div>
+
+          {muscleData.length > 0 ? (
+            <MostTrainedMusclesChart data={muscleData} />
+          ) : (
+            <IonText
+              color="medium"
+              style={{ display: 'block', marginTop: '1em' }}
+            >
+              no muscle data yet
             </IonText>
-            {muscleData.length > 0 ? (
-              <MostTrainedMusclesChart data={muscleData} />
-            ) : (
-              <IonText
-                color="medium"
-                style={{ display: 'block', marginTop: '1em' }}
-              >
-                no muscle data yet
-              </IonText>
-            )}
-          </IonCardContent>
-        </IonCard>
-      </IonContent>
-    </IonPage>
+          )}
+        </IonCardContent>
+      </IonCard>
+    </div>
   );
+};
+
+/**
+ * Keep the original default export to avoid breaking existing routes/imports.
+ */
+const Highscore: React.FC = () => {
+  return <HighscoreContent />;
 };
 
 export default Highscore;

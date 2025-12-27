@@ -67,7 +67,7 @@ const Training: React.FC = () => {
               shape="round"
               fill="clear"
               aria-label="Account"
-              routerLink="/my/account"
+              routerLink="/my/settings"
             >
               <IonIcon icon={personCircleOutline} slot="icon-only" />
             </IonButton>

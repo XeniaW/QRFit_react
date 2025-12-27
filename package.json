@@ -1,6 +1,6 @@
 {
-  "name": "QRFit",
-  "description": "Your fitness app",
+  "name": "PawerLifting",
+  "description": "Fitness app with heart",
   "version": "0.0.1",
   "private": true,
   "dependencies": {
